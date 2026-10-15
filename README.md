@@ -9,7 +9,7 @@ actually save, and does it cost quality?**
 
 ## Why this exists
 
-I built this pruning scheme in production at KKCompany and measured a large
+I built this pruning scheme as a prototype at KKCompany and measured a large
 wall-clock speedup. The naive compute estimate, however, predicts much less:
 
 ```
@@ -67,6 +67,31 @@ Two things the table shows:
    cache. That is why the measured speedup lands *above* the prediction from equal
    segments: pruning removes candidates exactly where steps are most expensive.
 
+### `torch/bench.py steps`: real musicgen-small weights, float16, 1500 steps (30 s), Tesla T4
+
+PyTorch + HF transformers port in `torch/` (same row-id-keyed noise and KV-cache
+pruning; its self-check passes on CUDA). Run on Kaggle via `kaggle_job/`
+(torch 2.11, transformers 5.17, eager mode). ms per decode step, by third of the clip:
+
+| batch (rows with CFG) | 0–10 s | 10–20 s | 20–30 s |
+|---|---|---|---|
+| 8 (16) | 17.8 | 23.4 | 36.1 |
+| 4 (8)  | 17.9 | 17.8 | 21.8 |
+| 2 (4)  | 18.3 | 18.0 | 18.1 |
+| 1 (2)  | 18.1 | 18.1 | 17.8 |
+
+| | speedup |
+|---|---|
+| naive compute estimate (24 / 14 candidate-segments) | 1.71x |
+| predicted wall-clock (measured step times, 8 → 4 → 2) | 1.44x |
+| **measured wall-clock, real pruned loop** (38.6 s → 26.8 s) | **1.44x** |
+
+Step time stops falling at about 18 ms per step, far above the ~2 ms needed to read the fp16 decoder
+weights once on a T4, so it is most likely per-step overhead (Python + kernel launches in
+the step-by-step loop; not profiled). Pruning only saves time where batch 8 rises above
+that level, late in the clip. The pruned survivor also matched the batch-8 run
+token-for-token at full scale in fp16.
+
 ### Upper bound: why "~5x" can't come from this schedule alone
 
 For each segment, the pruned run's cost is at least `(b/8)` of the baseline's cost for
@@ -106,6 +131,6 @@ score predict the final one, and how often does pruning discard the eventual win
 
 - M1 timings are not CUDA timings. The M1 has far less compute per byte of memory
   bandwidth than a datacenter GPU, so the batch-size scaling measured here does not
-  transfer 1:1 to the original deployment. The **quality** metrics (`bench.py run`) are
+  transfer 1:1 to the original prototype's hardware. The **quality** metrics (`bench.py run`) are
   hardware-independent.
-- `musicgen-small` (300M), not the model size used in production.
+- `musicgen-small` (300M), not the model size used in the prototype.
