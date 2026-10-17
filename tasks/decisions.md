@@ -29,3 +29,22 @@ now Audiobox CE (content enjoyment); CU/PC/PQ are logged as secondary. CMI-RM is
 the full run (USE_CMI = False), so a second judge cannot be picked after seeing results. The
 venv route (torch/score_cmi.py) is kept for a later attempt outside the 2-day scope.
 Judge independence still holds: CLAP prunes, Audiobox (a different model, prompt-free) judges.
+
+## 2026-10-18: Day 1 results, read before using results/frontier.json
+
+**Full corpus: 50/50 prompts, 45.9 min on a T4, no errors** (40 MusicCaps + 10 red-team).
+
+**The recommendation rule is too weak, and I did not change it after seeing results.**
+"Cheapest schedule whose regret CI lo <= 0" rewards wide CIs: it picks 5 s / keep 0.5
+(compute 0.354) with MusicCaps regret +0.042 [-0.082, +0.172], P(same winner) 0.62, and on the
+red-team set regret +0.256 [-0.156, +0.778] with P(same winner) 0.30. A sounder rule bounds
+the CI's upper end by a pre-declared margin. Jie to choose the margin before Day 2.
+
+**The judge barely sees what CLAP selects for (measured, n = 40 MusicCaps):**
+- CLAP's unpruned best-of-8 pick vs a random candidate, Audiobox CE: +0.19 [-0.04, +0.42]
+  (red-team, n = 10: +0.34 [+0.05, +0.61]); oracle vs random: +1.12.
+- Spearman(CLAP at first checkpoint, CE) about 0.08 [-0.04, 0.21].
+- CLAP agrees with itself: Spearman(CLAP 10 s, CLAP 30 s) = 0.69 [0.63, 0.75].
+So "no measurable regret" mostly says pruning preserves CLAP's choice, not that it preserves
+quality: selection itself gives no measurable CE gain on these 40 prompts. This weakens the
+Day 2 listening test as planned (it would compare two picks the judge can't tell apart).
