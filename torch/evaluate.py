@@ -60,6 +60,8 @@ def bootstrap_ci(x, n_boot=10_000, seed=0, alpha=0.05):
     """Mean with a percentile bootstrap CI over prompts. NaNs (e.g. undefined Spearman) dropped."""
     x = np.asarray(x, dtype=float)
     x = x[~np.isnan(x)]
+    if len(x) == 0:
+        return {"mean": float("nan"), "lo": float("nan"), "hi": float("nan"), "n": 0}
     means = x[np.random.default_rng(seed).integers(0, len(x), (n_boot, len(x)))].mean(axis=1)
     lo, hi = np.percentile(means, [100 * alpha / 2, 100 * (1 - alpha / 2)])
     return {"mean": float(x.mean()), "lo": float(lo), "hi": float(hi), "n": int(len(x))}

@@ -97,3 +97,11 @@ def test_aggregate_reports_every_metric_with_n():
     agg = aggregate(rows)
     assert set(agg) == {"compute", "regret", "oracle_regret", "same_winner", "false_kill", "spearman"}
     assert agg["regret"]["mean"] == pytest.approx(-2.0) and agg["regret"]["n"] == 3
+
+
+def test_bootstrap_all_nan_is_empty_not_a_warning():
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        ci = bootstrap_ci(np.array([np.nan, np.nan]))
+    assert ci["n"] == 0 and np.isnan(ci["mean"])
