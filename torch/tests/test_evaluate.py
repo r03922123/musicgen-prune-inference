@@ -52,3 +52,48 @@ def test_pruning_stops_at_one_survivor():
 def test_winner_is_best_final_among_survivors():
     r = simulate({10: [.1, .9, .8, .2]}, [.99, .1, .5, .3], [10], 0.5)
     assert r["survivors"] == [1, 2] and r["winner"] == 2   # row 0 has the best final but is dead
+
+
+# --- part 2: per-prompt metrics and bootstrap CIs ---
+import numpy as np
+from evaluate import prompt_metrics, bootstrap_ci, aggregate
+
+JUDGE = [1.0, 2.0, 3.0, 4.0]
+
+
+def test_toy_prompt_metrics():
+    m = prompt_metrics(EARLY, FINAL, JUDGE, [10, 20], 0.5)
+    assert m["compute"] == pytest.approx(70 / 120)
+    assert m["regret"] == pytest.approx(-2.0)        # judge(best-of-4 by pruner = row 0) - judge(row 2)
+    assert m["oracle_regret"] == pytest.approx(1.0)  # judge max (row 3) - judge(row 2)
+    assert m["same_winner"] == 0.0
+    assert m["false_kill"] == 0.5                    # judge top-2 = {3, 2}; row 3 was pruned
+    assert m["spearman"] == pytest.approx(0.2)       # pruner @10s vs judge: ranks [1,4,3,2] vs [1,2,3,4]
+
+
+def test_unpruned_schedule_has_zero_regret():
+    m = prompt_metrics(EARLY, FINAL, JUDGE, [], 0.5)
+    assert m["regret"] == 0 and m["same_winner"] == 1.0 and m["false_kill"] == 0 and m["compute"] == 1
+
+
+def test_bootstrap_is_seeded_and_brackets_the_mean():
+    x = np.array([0.0, 1.0, 2.0, 5.0, -1.0, 3.0])
+    a, b = bootstrap_ci(x, seed=0), bootstrap_ci(x, seed=0)
+    assert a == b
+    assert a["mean"] == pytest.approx(x.mean()) and a["lo"] < a["mean"] < a["hi"] and a["n"] == 6
+
+
+def test_bootstrap_constant_input_has_zero_width():
+    ci = bootstrap_ci(np.full(10, 0.25))
+    assert ci["lo"] == ci["hi"] == ci["mean"] == pytest.approx(0.25)
+
+
+def test_bootstrap_drops_nan():
+    assert bootstrap_ci(np.array([1.0, np.nan, 3.0]))["n"] == 2
+
+
+def test_aggregate_reports_every_metric_with_n():
+    rows = [prompt_metrics(EARLY, FINAL, JUDGE, [10, 20], 0.5)] * 3
+    agg = aggregate(rows)
+    assert set(agg) == {"compute", "regret", "oracle_regret", "same_winner", "false_kill", "spearman"}
+    assert agg["regret"]["mean"] == pytest.approx(-2.0) and agg["regret"]["n"] == 3
