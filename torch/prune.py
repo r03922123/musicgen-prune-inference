@@ -97,12 +97,14 @@ def generate(model, cond, n, max_steps, score_fn=None, checkpoints=(), keep_frac
 
 def random_model(hidden=64, layers=2, heads=4, ffn=128, K=4, V=2048, seed=0):
     """MusicGen decoder with random weights and real shapes -- no downloads.
-    Enough for correctness checks, and for timing (FLOPs don't care about values)."""
+    Enough for correctness checks, and for timing (FLOPs don't care about values).
+    init std 0.2, not HF's 0.02: at 0.02 attention barely moves the logits, so a
+    self-check could not notice a KV cache holding the wrong rows."""
     torch.manual_seed(seed)
     cfg = MusicgenDecoderConfig(vocab_size=V, num_codebooks=K, hidden_size=hidden,
                                 num_hidden_layers=layers, num_attention_heads=heads,
                                 ffn_dim=ffn, pad_token_id=V, bos_token_id=V,
-                                max_position_embeddings=2048)
+                                max_position_embeddings=2048, initializer_factor=0.2)
     return MusicgenForCausalLM(cfg).eval()
 
 
