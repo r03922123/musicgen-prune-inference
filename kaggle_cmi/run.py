@@ -58,8 +58,9 @@ def main():
         py = str(VENV / "bin/python")
         summary["setup"] = (
             sh(["git", "clone", "-q", "--depth", "1", "https://github.com/Haiwen-Xia/CMI-RewardBench", str(CMI)])
-            or sh([PY, "-m", "venv", "--system-site-packages", str(VENV)])
-            or sh([py, "-m", "pip", "install", "-q", "transformers==4.57.3", "einops", "librosa", "nnAudio",
+            # Kaggle's Python has no ensurepip: make the venv without pip, install with the main pip
+            or sh([PY, "-m", "venv", "--system-site-packages", "--without-pip", str(VENV)])
+            or sh([PY, "-m", "pip", "--python", py, "install", "-q", "transformers==4.57.3", "einops", "librosa", "nnAudio",
                    "easydict", "x-clip", "omegaconf"])
             or sh([PY, "-c", "from huggingface_hub import snapshot_download as d; "
                    f"print(d('HaiwenXia/CMI-RM', local_dir='{CMI}/baselines/model'))"]))
