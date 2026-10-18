@@ -1,0 +1,182 @@
+{
+ "pip": 0,
+ "env": "2.11.0+cu128 12.8 5.17.0",
+ "selfcheck": {
+  "exit": 0,
+  "s": 24.0
+ },
+ "profile": {
+  "exit": 0,
+  "s": 95.3
+ },
+ "profile_decode_small_float16_pretrained_t4.json": {
+  "device": "Tesla T4",
+  "size": "small",
+  "dtype": "float16",
+  "weights": "pretrained",
+  "steps": 50,
+  "torch": "2.11.0+cu128",
+  "batches": {
+   "1": {
+    "gpu_busy_ms_per_step": 6.522946718749999,
+    "kernels_per_step": 498.02,
+    "mean_kernel_us": 13.086856833058913,
+    "launch_calls_per_step": 301.06,
+    "launch_cpu_ms_per_step": 2.6120147000000005,
+    "sync_wait_ms_per_step": 0.01687656,
+    "top_kernels_share": [
+     [
+      "void cutlass::Kernel2<cutlass_75_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2_tn_align8>(",
+      0.691
+     ],
+     [
+      "fmha_cutlassF_f16_aligned_64x64_rf_sm75(PyTorchMemEffAttention::AttentionKernel<cutlass::h",
+      0.116
+     ],
+     [
+      "void at::native::(anonymous namespace)::vectorized_layer_norm_kernel<c10::Half, float, fal",
+      0.08
+     ],
+     [
+      "void at::native::vectorized_elementwise_kernel<4, at::native::CUDAFunctor_add<c10::Half>, ",
+      0.032
+     ],
+     [
+      "void at::native::(anonymous namespace)::CatArrayBatchedCopy_vectorized<at::native::(anonym",
+      0.032
+     ],
+     [
+      "void at::native::vectorized_elementwise_kernel<4, at::native::GeluCUDAKernelImpl(at::Tenso",
+      0.013
+     ],
+     [
+      "void at::native::radixSortKVInPlace<2, -1, 32, 32, float, long, unsigned int>(at::cuda::de",
+      0.007
+     ],
+     [
+      "void at::native::sbtopk::gatherTopK<float, unsigned int, 2, false>(at::cuda::detail::Tenso",
+      0.007
+     ]
+    ],
+    "wall_ms_per_step": 18.675069099999746,
+    "wall_ms_per_step_profiled": 31.700056759999597,
+    "gpu_share_of_wall": 0.3492863498293609,
+    "gpu_idle_ms_per_step": 12.152122381249747,
+    "top_cpu_ops_self_ms_per_step": [
+     [
+      "aten::mm",
+      5.325
+     ],
+     [
+      "cudaLaunchKernel",
+      2.551
+     ],
+     [
+      "aten::empty",
+      1.606
+     ],
+     [
+      "cuLaunchKernel",
+      1.536
+     ],
+     [
+      "aten::add",
+      1.068
+     ],
+     [
+      "aten::native_layer_norm",
+      1.046
+     ],
+     [
+      "aten::matmul",
+      1.015
+     ],
+     [
+      "aten::transpose",
+      0.772
+     ]
+    ]
+   },
+   "8": {
+    "gpu_busy_ms_per_step": 8.572966049804688,
+    "kernels_per_step": 498.98,
+    "mean_kernel_us": 17.172259970339493,
+    "launch_calls_per_step": 303.02,
+    "launch_cpu_ms_per_step": 2.60427108,
+    "sync_wait_ms_per_step": 0.01701314,
+    "top_kernels_share": [
+     [
+      "void cutlass::Kernel2<cutlass_75_wmma_tensorop_f16_s161616gemm_f16_16x16_128x2_tn_align8>(",
+      0.546
+     ],
+     [
+      "fmha_cutlassF_f16_aligned_64x64_rf_sm75(PyTorchMemEffAttention::AttentionKernel<cutlass::h",
+      0.271
+     ],
+     [
+      "void at::native::(anonymous namespace)::vectorized_layer_norm_kernel<c10::Half, float, fal",
+      0.062
+     ],
+     [
+      "void at::native::(anonymous namespace)::CatArrayBatchedCopy_vectorized<at::native::(anonym",
+      0.042
+     ],
+     [
+      "void at::native::vectorized_elementwise_kernel<4, at::native::CUDAFunctor_add<c10::Half>, ",
+      0.025
+     ],
+     [
+      "void at::native::(anonymous namespace)::indexSelectSmallIndex<c10::Half, long, unsigned in",
+      0.012
+     ],
+     [
+      "void at::native::vectorized_elementwise_kernel<4, at::native::GeluCUDAKernelImpl(at::Tenso",
+      0.011
+     ],
+     [
+      "void at::native::sbtopk::gatherTopK<float, unsigned int, 2, false>(at::cuda::detail::Tenso",
+      0.006
+     ]
+    ],
+    "wall_ms_per_step": 22.171840780000593,
+    "wall_ms_per_step_profiled": 31.598158980000335,
+    "gpu_share_of_wall": 0.38666009443553556,
+    "gpu_idle_ms_per_step": 13.598874730195906,
+    "top_cpu_ops_self_ms_per_step": [
+     [
+      "aten::mm",
+      5.523
+     ],
+     [
+      "cudaLaunchKernel",
+      2.59
+     ],
+     [
+      "aten::empty",
+      1.649
+     ],
+     [
+      "cuLaunchKernel",
+      1.569
+     ],
+     [
+      "aten::add",
+      1.118
+     ],
+     [
+      "aten::native_layer_norm",
+      1.043
+     ],
+     [
+      "aten::matmul",
+      0.995
+     ],
+     [
+      "aten::transpose",
+      0.714
+     ]
+    ]
+   }
+  }
+ }
+}

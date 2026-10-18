@@ -71,5 +71,5 @@
 - [x] MuQ-MuLan scoring (CPU + T4 cross-check) and Q2
 - [x] CMI-RM scoring in its own venv (v1 setup failure, v2 complete)
 - [x] Blind listening script (torch/listen.py); listening itself: pending (Jie)
-- [ ] torch.profiler on T4: job pushed, queued on Kaggle; README reports it as pending
+- [x] torch.profiler on T4 (queued 18:01-19:41, ran 19:41-19:44): GPU busy 35 % of wall at batch 1
 - [x] README restructured around Q1/Q2 and SPEC 0.6

@@ -1,0 +1,4 @@
+device=cuda torch=2.11.0+cu128
+survivor=[5] offline-rule=[5] token match=1.0000
+mutation (position-keyed noise): token match=0.4342
+OK: pruning drops rows from tokens + KV cache without changing survivors

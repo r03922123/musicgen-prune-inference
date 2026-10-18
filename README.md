@@ -41,7 +41,7 @@ The project separates what was possible with tools available during the original
 | Audiobox Aesthetics judge (Feb 2025) | x | | done |
 | MuQ-MuLan alignment judge (Jan 2025) | x | | done |
 | Blind listening test | x | | script ready, not yet run (`torch/listen.py`) |
-| torch.profiler breakdown | x | | attempted, pending (Kaggle job queued) |
+| torch.profiler breakdown | x | | done: launch-overhead hypothesis confirmed |
 | CUDA graphs / torch.compile (PyTorch 2.0, Mar 2023) | x | | deferred |
 | CMI-RM judge (Mar 2026) | | x | done (scoring pass on saved WAVs, own venv) |
 | Learned early-value predictor, DPO to shrink N | | x | deferred |
@@ -185,19 +185,29 @@ matched the batch-8 run token-for-token at full scale in fp16.
 
 ### Profiler: why step time stops falling at ~18 ms
 
-**Status: attempted, pending. No profiler result yet.** `torch/profile_decode.py` (unit-tested, smoke-run
-on CPU) is pushed as Kaggle kernel `samlinlinlin/musicgen-prune-profile` (`kaggle_profile/`).
-It sat in Kaggle's GPU queue from 18:01 and had not started by the time this README was written.
-Once it runs, it reports, for 50 decode steps at batch 1 and batch 8: unprofiled wall time
-per step, GPU busy time (union of kernel and memcpy intervals), the GPU share of wall time,
-kernels and launch calls per step, and the top CPU ops.
+Source: `results/profile_decode_small_float16_pretrained_t4.json` (*measured*; torch.profiler, Tesla
+T4, torch 2.11, eager mode, real weights, fp16, 50 decode steps from an empty cache, run via
+`kaggle_profile/` after the self-check passed on the same machine). Wall time is from an
+unprofiled run (best of 3). GPU busy = union of kernel and memcpy intervals in the trace.
 
-Until then, the 18 ms floor remains a **hypothesis**. The T4 table shows step time flat at
-about 18 ms from batch 1 to batch 4. Reading the fp16 decoder weights once takes roughly 2 ms at
-the T4's memory bandwidth (*derived*), so the floor is probably CPU-side overhead: Python, HF
-module dispatch, and about one kernel launch per op in an eager step-by-step loop. If it is,
-the profiler should show a GPU share well under 50 % at batch 1, and CUDA graphs (deferred)
-would raise the pruning speedup.
+| batch (rows with CFG) | wall ms/step | GPU busy ms/step | GPU share | GPU idle ms/step | kernels/step | mean kernel |
+|---|---|---|---|---|---|---|
+| 1 (2)  | 18.7 | 6.5 | 35 % | 12.2 | 498 | 13 us |
+| 8 (16) | 22.2 | 8.6 | 39 % | 13.6 | 499 | 17 us |
+
+**The 18 ms launch-overhead hypothesis is confirmed (measured).** At batch 1 the GPU is busy for
+only 6.5 of 18.7 ms per step and idle for the other 12.2 ms, waiting for the CPU. Each step
+issues about 500 small kernels (mean 13 us), and the CPU needs longer to dispatch them than the
+GPU needs to run them. The launch API calls alone take 2.6 ms/step of CPU time; the rest of the CPU time
+goes to PyTorch/HF dispatch (`aten::mm`, `aten::empty`, ... in `top_cpu_ops_self_ms_per_step`).
+GPU work barely grows from batch 1 to 8 (6.5 → 8.6 ms): the fp16 GEMMs (55-69 % of kernel time)
+are dominated by reading the weights, not by the number of rows.
+
+What this implies (*hypothesis*, not measured here; CUDA graphs are deferred): removing the
+per-step overhead (CUDA graphs / torch.compile) would cut step time toward the GPU-busy figures.
+Pruning's gain would then follow GPU time rather than the flat 18 ms floor, which caps the T4
+speedup at 1.44x today. These are early-clip steps (first 50 of 1500); late steps at batch 8
+are longer because attention reads a longer KV cache (36 ms/step in the last third above).
 
 ### Upper bound: why "~5x" can't come from this schedule alone
 

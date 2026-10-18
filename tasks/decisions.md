@@ -108,3 +108,10 @@ the four pre-registered ones whose 95 % CI excludes 0, and it does not survive B
 four (98.75 % CI [-0.029, +0.340]); reported as a small, marginal gain, not as a finding.
 Q1 regret columns keep Audiobox CE as the judge (Day 1 choice); frontier.py is run with
 `--judge aes_CE` because `auto` would now pick cmi_qual.
+
+## 2026-10-18: profiler (step 8)
+
+Kaggle queued the job 18:01-19:41; it ran 19:41-19:44 after the self-check passed (token match
+1.0). Batch 1: wall 18.7 ms/step, GPU busy 6.5 ms (35 %), ~498 kernels/step at 13 us mean;
+batch 8: 22.2 / 8.6 ms (39 %). The launch-overhead hypothesis is confirmed; CUDA graphs stay
+deferred (not implemented, per instruction). results/profile_decode_small_float16_pretrained_t4.json.
