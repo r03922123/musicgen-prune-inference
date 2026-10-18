@@ -93,3 +93,5 @@ Exploratory check (results/judge_agreement.json, not pre-registered): the two te
 agree mildly on which PROMPTS come out well (between-prompt rho +0.35, n = 50) but not on which
 CANDIDATE of a prompt is best (within-prompt rho +0.01 [-0.11, +0.13]). The within-prompt
 choice is the decision that selection needs.
+Cross-check: the Kaggle T4 run (results/judge_mulan_t4.json, 5.0 min of scoring, torch 2.11 +
+transformers 4.57.3) matches the CPU scores to max |diff| 2.5e-5, same argmax on 50/50 prompts.
