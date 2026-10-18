@@ -48,3 +48,34 @@ the CI's upper end by a pre-declared margin. Jie to choose the margin before Day
 So "no measurable regret" mostly says pruning preserves CLAP's choice, not that it preserves
 quality: selection itself gives no measurable CE gain on these 40 prompts. This weakens the
 Day 2 listening test as planned (it would compare two picks the judge can't tell apart).
+
+## 2026-10-18: Day 2 decisions, recorded before any new computation
+
+Recorded before the MuQ-MuLan / CMI-RM scoring, the listening test and the profiler, so none of
+them can shape these choices. Inputs seen so far: results/frontier.json (Day 1) only.
+
+**1. The analysis is split into two questions.**
+- Q1 pruning fidelity: does the pruned schedule keep the unpruned CLAP best-of-8 pick, and at
+  what compute? Metrics: same-winner rate vs the unpruned CLAP pick, compute. Judge-free.
+- Q2 selection value: does the CLAP pick beat a random candidate under an independent judge?
+  Metrics: CLAP-pick gain vs random (mean judge score of the pick minus the mean over all 8),
+  oracle gain (judge max minus the same mean), Spearman(CLAP 30 s, judge), bootstrap CIs.
+Regret under a judge (Day 1's headline) is still reported but is no longer the decision metric:
+it mixes Q1 and Q2, and Day 1 showed Q2 is near zero under Audiobox CE.
+
+**2. Q1 recommendation rule: the cheapest schedule with MusicCaps same-winner >= 0.90.**
+This threshold was set AFTER seeing the Day 1 results (frontier.json), so it is not
+pre-registered; it replaces the Day 1 rule (regret CI lo <= 0), which rewarded wide CIs.
+The red-team set (n = 10) is reported separately and does not enter the rule.
+
+**3. False-kill caveat.** Top-2 false-kill counts prompts where at least one of the judge's top-2
+candidates is pruned. A schedule that ends with 1 survivor must kill at least one of the two,
+so its false-kill is >= 0.5 by construction. False-kill is only compared between schedules
+with the same final survivor count.
+
+**4. Q2 judges, pre-registered:**
+- MuQ-MuLan text-audio similarity (Jan 2025): the then-era alignment judge (SPEC 0.6 (a)).
+- CMI-RM (Mar 2026): the now-era judge (SPEC 0.6 (b)), as a background scoring pass in its
+  own venv; if it has not finished when the README is written it is reported as pending.
+- Audiobox Aesthetics CE stays as the enjoyment axis.
+No judge is dropped or added after seeing its numbers.
