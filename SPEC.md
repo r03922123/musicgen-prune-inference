@@ -64,6 +64,25 @@ not run cleanly on a T4, use Audiobox Aesthetics as the judge and record the swi
       update the public article's numbers
 - [ ] /review in a fresh session; fix findings; commit
 
+## 0.6 Then vs now (the project's organising principle)
+
+(a) THEN = the best design possible with tools available during the KKCompany tenure
+(May 2023 - Jul 2025). (b) NOW = what 2026 methods add. Every phase maps to one of them.
+
+| Item | (a) then | (b) now | 2-day status |
+|---|---|---|---|
+| PyTorch port, row-id noise, KV-cache pruning, tests | x | | done |
+| Corpus-first offline evaluation, schedule frontier, bootstrap CIs | x | | done (Day 1) |
+| CLAP as pruner (2022) | x | | done |
+| Audiobox Aesthetics judge (Feb 2025) | x | | done (Day 1 judge) |
+| MuQ-MuLan alignment judge (Jan 2025) | x | | Day 2 |
+| Blind listening test | x | | Day 2 |
+| torch.profiler breakdown | x | | Day 2 |
+| CUDA graphs / torch.compile (PyTorch 2.0, Mar 2023) | x | | deferred |
+| CMI-RM judge / pruner (Mar 2026) | | x | Day 2, background scoring pass on saved WAVs |
+| Learned early-value predictor (O1) | | x | deferred |
+| DPO to shrink N (O4) | | x | deferred |
+
 ## 1. Principles
 
 - Altitude: every task must move the frontier or its credibility. Anything else is cut.
