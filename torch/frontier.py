@@ -67,7 +67,7 @@ def plot(res, path):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     colors = {"musiccaps": "#2b6cb0", "redteam": "#c05621"}
-    fig, (q1, q2) = plt.subplots(1, 2, figsize=(11, 4.4), gridspec_kw={"width_ratios": [1.15, 1]})
+    fig, (q1, q2) = plt.subplots(1, 2, figsize=(11, 5.0), gridspec_kw={"width_ratios": [1.15, 1]})
     for s, c in colors.items():
         pts = [x for x in res["schedules"] if s in x["sets"] and x["first"] is not None]
         if not pts:
@@ -79,14 +79,17 @@ def plot(res, path):
         q1.errorbar(xs, ys, yerr=err, fmt="o", color=c, capsize=3, alpha=0.9, label=f"{s} (n={res['n'][s]})")
         if s == "musiccaps":
             for x, xv, yv in zip(pts, xs, ys):
-                q1.annotate(f"{x['first']}s/{x['keep']}", (xv, yv), fontsize=7, xytext=(5, -9),
-                            textcoords="offset points", color=c)
+                left = (x["first"], x["keep"]) in {(10, 0.5), (10, 0.65)}   # neighbours on the right
+                q1.annotate(f"{x['first']}s/{x['keep']}", (xv, yv), fontsize=7, color=c,
+                            xytext=(-6, -10) if left else (6, -10), textcoords="offset points",
+                            ha="right" if left else "left")
     q1.axhline(SAME_WINNER_MIN, color="gray", lw=0.8, ls="--")
-    q1.text(0.33, SAME_WINNER_MIN + 0.01, f"rule: same-winner >= {SAME_WINNER_MIN}", fontsize=7, color="gray")
+    q1.text(0.36, SAME_WINNER_MIN + 0.015, f"rule: same-winner >= {SAME_WINNER_MIN}", fontsize=7, color="gray")
     q1.set_xlabel("compute (candidate-seconds / 8 x 30 s)")
     q1.set_ylabel("P(pruned winner = unpruned CLAP pick)")
     q1.set_title("Q1 pruning fidelity, 95% bootstrap CI", fontsize=10)
     q1.set_ylim(-0.05, 1.08)
+    q1.set_xlim(right=0.88)
     q1.legend(fontsize=8, loc="lower right")
     judges = list(res["selection"])
     for k, (s, c) in enumerate(colors.items()):
@@ -103,7 +106,7 @@ def plot(res, path):
     q2.invert_yaxis()
     q2.set_xlabel("judge score gain over a random candidate (judge units)")
     q2.set_title("Q2 selection value: unpruned CLAP best-of-8", fontsize=10)
-    q2.legend(fontsize=7, loc="lower right")
+    q2.legend(fontsize=7, loc="upper center", bbox_to_anchor=(0.5, -0.14), ncol=2, frameon=False)
     fig.tight_layout()
     fig.savefig(path, dpi=150)
 
