@@ -1,0 +1,11 @@
+{
+ "judge": "cmi",
+ "input": "/kaggle/input/musicgen-prune-corpus",
+ "n_wavs": 400,
+ "setup": 0,
+ "env_before": "2.11.0+cu128 5.16.1",
+ "env_after": "2.11.0+cu128 4.57.3",
+ "score_exit": 0,
+ "done": 50,
+ "minutes": 5.5
+}

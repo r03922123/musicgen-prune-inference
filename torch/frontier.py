@@ -13,7 +13,7 @@ Q2 selection value, per judge: CLAP-pick gain vs a random candidate, oracle gain
 """
 import argparse, json
 from pathlib import Path
-from evaluate import aggregate, checkpoints, prompt_metrics, selection_metrics
+from evaluate import aggregate, bootstrap_ci, checkpoints, prompt_metrics, selection_metrics
 
 GRID = [(f, k) for f in (5, 10) for k in (0.5, 0.65, 0.75)]
 SETS = {"musiccaps": "mc_", "redteam": "rt_"}
@@ -47,8 +47,14 @@ def frontier(recs, judge):
         scheds.append({"first": first, "keep": keep, "checkpoints": cps, "sets": sets, "secondary": secondary})
     ok = [s for s in scheds if s["sets"]["musiccaps"]["same_winner"]["mean"] >= SAME_WINNER_MIN]
     rec = min(ok, key=lambda s: s["sets"]["musiccaps"]["compute"]["mean"])
+    q2 = [j for j in judges if j in Q2_JUDGES]
     selection = {j: {s: aggregate([selection_metrics(r["scores"]["clap"]["30"], r["scores"][j]) for r in v])
-                     for s, v in split.items()} for j in judges if j in Q2_JUDGES}
+                     for s, v in split.items()} for j in q2}
+    for j in q2:                                   # Bonferroni over the judge readings reported
+        for s, v in split.items():
+            g = [selection_metrics(r["scores"]["clap"]["30"], r["scores"][j])["gain_vs_random"] for r in v]
+            selection[j][s]["gain_vs_random_bonferroni"] = dict(bootstrap_ci(g, alpha=0.05 / len(q2)),
+                                                               alpha=0.05 / len(q2))
     return {"pruner": "clap", "judge": judge, "secondary_judges": [j for j in judges if j != judge],
             "n": {s: len(v) for s, v in split.items()}, "schedules": scheds,
             "recommended": {"first": rec["first"], "keep": rec["keep"],

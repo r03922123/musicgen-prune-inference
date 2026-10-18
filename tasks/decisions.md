@@ -95,3 +95,16 @@ CANDIDATE of a prompt is best (within-prompt rho +0.01 [-0.11, +0.13]). The with
 choice is the decision that selection needs.
 Cross-check: the Kaggle T4 run (results/judge_mulan_t4.json, 5.0 min of scoring, torch 2.11 +
 transformers 4.57.3) matches the CPU scores to max |diff| 2.5e-5, same argmax on 50/50 prompts.
+
+## 2026-10-18: Q2 under CMI-RM (step 6)
+
+CMI-RM v1 failed in setup (Kaggle's Python has no ensurepip, so `venv` failed); v2 creates
+the venv `--without-pip` and installs into it with the main pip's `--python`. 50/50 prompts
+in 5.5 min on a T4 (results/judge_cmi.json, judge_cmi_summary.json).
+
+Result, MusicCaps n = 40: CLAP-pick gain vs random under CMI-RM quality +0.157 [+0.010, +0.300]
+(oracle +0.590); alignment +0.110 [-0.004, +0.219]. This is the only MusicCaps reading of
+the four pre-registered ones whose 95 % CI excludes 0, and it does not survive Bonferroni over the
+four (98.75 % CI [-0.029, +0.340]); reported as a small, marginal gain, not as a finding.
+Q1 regret columns keep Audiobox CE as the judge (Day 1 choice); frontier.py is run with
+`--judge aes_CE` because `auto` would now pick cmi_qual.
