@@ -65,3 +65,11 @@
 **Deps:** T8, T9. **Scope:** XS
 
 ## Checkpoint: end of Day 1, stop and summarise
+
+# Day 2 (tasks/decisions.md, 2026-10-18)
+- [x] Decisions 1-4 recorded before new computation
+- [x] MuQ-MuLan scoring (CPU + T4 cross-check) and Q2
+- [x] CMI-RM scoring in its own venv (v1 setup failure, v2 complete)
+- [x] Blind listening script (torch/listen.py); listening itself: pending (Jie)
+- [ ] torch.profiler on T4: job pushed, queued on Kaggle; README reports it as pending
+- [x] README restructured around Q1/Q2 and SPEC 0.6

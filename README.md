@@ -41,7 +41,7 @@ The project separates what was possible with tools available during the original
 | Audiobox Aesthetics judge (Feb 2025) | x | | done |
 | MuQ-MuLan alignment judge (Jan 2025) | x | | done |
 | Blind listening test | x | | script ready, not yet run (`torch/listen.py`) |
-| torch.profiler breakdown | x | | <!--PROFILE-STATUS--> |
+| torch.profiler breakdown | x | | attempted, pending (Kaggle job queued) |
 | CUDA graphs / torch.compile (PyTorch 2.0, Mar 2023) | x | | deferred |
 | CMI-RM judge (Mar 2026) | | x | done (scoring pass on saved WAVs, own venv) |
 | Learned early-value predictor, DPO to shrink N | | x | deferred |
@@ -185,7 +185,19 @@ matched the batch-8 run token-for-token at full scale in fp16.
 
 ### Profiler: why step time stops falling at ~18 ms
 
-<!--PROFILE-->
+**Status: attempted, pending. No profiler result yet.** `torch/profile_decode.py` (unit-tested, smoke-run
+on CPU) is pushed as Kaggle kernel `samlinlinlin/musicgen-prune-profile` (`kaggle_profile/`).
+It sat in Kaggle's GPU queue from 18:01 and had not started by the time this README was written.
+Once it runs, it reports, for 50 decode steps at batch 1 and batch 8: unprofiled wall time
+per step, GPU busy time (union of kernel and memcpy intervals), the GPU share of wall time,
+kernels and launch calls per step, and the top CPU ops.
+
+Until then, the 18 ms floor remains a **hypothesis**. The T4 table shows step time flat at
+about 18 ms from batch 1 to batch 4. Reading the fp16 decoder weights once takes roughly 2 ms at
+the T4's memory bandwidth (*derived*), so the floor is probably CPU-side overhead: Python, HF
+module dispatch, and about one kernel launch per op in an eager step-by-step loop. If it is,
+the profiler should show a GPU share well under 50 % at batch 1, and CUDA graphs (deferred)
+would raise the pruning speedup.
 
 ### Upper bound: why "~5x" can't come from this schedule alone
 
