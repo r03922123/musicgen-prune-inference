@@ -79,3 +79,17 @@ with the same final survivor count.
   own venv; if it has not finished when the README is written it is reported as pending.
 - Audiobox Aesthetics CE stays as the enjoyment axis.
 No judge is dropped or added after seeing its numbers.
+
+## 2026-10-18: Q2 under MuQ-MuLan (step 5)
+
+**Where the scores came from.** The Kaggle MuQ-MuLan job queued for about 25 min, so the same
+script (torch/score_judge.py, transformers 4.57.3, muq 0.1.0) scored all 400 WAVs on the Mac's
+CPU: results/judge_mulan.json. The Kaggle T4 run is a cross-check of the same numbers.
+
+**Result (n = 40 MusicCaps / 10 red-team): CLAP's pick does not beat a random candidate under
+MuQ-MuLan.** Gain -0.008 [-0.030, +0.015] (oracle +0.111); red-team +0.009 [-0.055, +0.073].
+Within-prompt Spearman(CLAP 30 s, MuQ-MuLan) -0.05 [-0.18, +0.08] on MusicCaps.
+Exploratory check (results/judge_agreement.json, not pre-registered): the two text-audio models
+agree mildly on which PROMPTS come out well (between-prompt rho +0.35, n = 50) but not on which
+CANDIDATE of a prompt is best (within-prompt rho +0.01 [-0.11, +0.13]). The within-prompt
+choice is the decision that selection needs.
