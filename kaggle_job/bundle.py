@@ -13,6 +13,7 @@ JOBS = {
     "kaggle_corpus": {p: p for p in ("torch/prune.py", "torch/scorers.py", "torch/generate_corpus.py",
                                      "torch/score_judge.py",
                                      "data/prompts/musiccaps_40.tsv", "data/prompts/redteam_10.tsv")},
+    "kaggle_profile": {n: f"torch/{n}" for n in ("prune.py", "bench.py", "profile_decode.py")},
     "kaggle_judge": {p: p for p in ("torch/scorers.py", "torch/score_judge.py")},
 }
 # job dir -> (template job whose run.py head is reused, {old: new} edits to that head)
