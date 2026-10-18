@@ -41,7 +41,8 @@ def prompt_metrics(early, final, judge, cps, keep_frac, horizon=30):
       regret         judge(unpruned pick) - judge(pruned winner)   (< 0: pruning got lucky)
       oracle_regret  max judge - judge(pruned winner)
       false_kill     share of the judge's top-2 rows that did not survive to the end
-      spearman       pruner score at the first checkpoint vs final judge score, over rows"""
+      spearman       pruner score at the first checkpoint vs final judge score, over rows
+      survivors      rows alive at the end (with 1 survivor, false_kill >= 0.5 by construction)"""
     from scipy.stats import spearmanr
     judge = np.asarray(judge, dtype=float)
     r = simulate(early, final, cps, keep_frac, horizon)
@@ -53,6 +54,22 @@ def prompt_metrics(early, final, judge, cps, keep_frac, horizon=30):
             "oracle_regret": float(judge.max() - judge[r["winner"]]),
             "same_winner": float(r["winner"] == base),
             "false_kill": sum(i not in r["survivors"] for i in top2) / 2,
+            "spearman": rho,
+            "survivors": len(r["survivors"])}
+
+
+def selection_metrics(final, judge):
+    """Q2, one prompt: is the pruner's unpruned best-of-n pick better than a random candidate?
+      gain_vs_random  judge(pruner pick) - mean judge (the expectation of a uniform random pick)
+      oracle_gain     max judge - mean judge (the most any selector could gain)
+      spearman        final pruner score vs judge score, over rows (NaN if either is constant)"""
+    from scipy.stats import spearmanr
+    judge = np.asarray(judge, dtype=float)
+    pick = int(np.argmax(final))                                 # argmax keeps the first on ties
+    with np.errstate(invalid="ignore"):
+        rho = float(spearmanr(final, judge)[0]) if np.ptp(final) and np.ptp(judge) else float("nan")
+    return {"gain_vs_random": float(judge[pick] - judge.mean()),
+            "oracle_gain": float(judge.max() - judge.mean()),
             "spearman": rho}
 
 

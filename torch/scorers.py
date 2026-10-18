@@ -5,6 +5,7 @@ and returns {score name: (B,) numpy}.
   Clap      pruner: text-audio cosine, chunked 10 s mean (deterministic, see ../bench.py)
   Audiobox  judge: Audiobox Aesthetics CE/CU/PC/PQ (pip install audiobox_aesthetics)
   CmiRm     judge: CMI-RM alignment + quality (github.com/Haiwen-Xia/CMI-RewardBench)
+  MuqMulan  judge: MuQ-MuLan text-audio similarity (pip install muq; needs transformers 4.x)
 """
 import sys
 import numpy as np
@@ -74,3 +75,20 @@ class CmiRm:
         out = self.m.score_batch([{"audio": w[None], "text": prompt} for w in x], max_dur=30.0)
         out = np.asarray(out, dtype=np.float32)
         return {"cmi_ali": out[:, 0], "cmi_qual": out[:, 1]}
+
+
+class MuqMulan:
+    """MuQ-MuLan (OpenMuQ/MuQ-MuLan-large): 24 kHz; clips longer than 10 s are cut into 10 s
+    pieces and their latents averaged by the model itself. Score = audio-text dot product."""
+    def __init__(self, device="cuda:0", name="OpenMuQ/MuQ-MuLan-large"):
+        from muq import MuQMuLan
+        self.dev = device
+        self.m = MuQMuLan.from_pretrained(name).to(device).eval()
+
+    @torch.inference_mode()
+    def __call__(self, wavs, prompt):
+        import torchaudio
+        x = torchaudio.functional.resample(torch.from_numpy(np.stack(wavs)), SR, self.m.sr).to(self.dev)
+        a = self.m(wavs=x)
+        t = self.m(texts=[prompt])
+        return {"mulan": self.m.calc_similarity(a, t)[:, 0].float().cpu().numpy()}

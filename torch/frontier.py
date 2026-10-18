@@ -1,20 +1,25 @@
 """
-Compute-vs-regret frontier over pruning schedules (SPEC 0.5), from the unpruned corpus.
+Pruning schedules evaluated offline from the unpruned corpus (SPEC 0.5; Q1/Q2 split in
+tasks/decisions.md, 2026-10-18).
 
   python torch/frontier.py --corpus data/corpus --out results
 
 Pruner: CLAP. Schedules: first checkpoint {5, 10} s (then every first s) x keep {0.5, 0.65, 0.75}.
 MusicCaps (mc_*) and red-team (rt_*) prompts are reported separately, each with its n.
-Recommended = the cheapest schedule whose 95% CI on MusicCaps regret does not lie above 0
-("no loss detected on n prompts", not "no loss").
+Q1 pruning fidelity (judge-free): same-winner rate vs the unpruned CLAP pick, compute.
+  Recommended = the cheapest schedule with MusicCaps same-winner >= 0.90 (threshold chosen after
+  seeing Day 1 results). Regret / false-kill under the judge are kept per schedule.
+Q2 selection value, per judge: CLAP-pick gain vs a random candidate, oracle gain, Spearman.
 """
 import argparse, json
 from pathlib import Path
-from evaluate import aggregate, checkpoints, prompt_metrics
+from evaluate import aggregate, checkpoints, prompt_metrics, selection_metrics
 
 GRID = [(f, k) for f in (5, 10) for k in (0.5, 0.65, 0.75)]
 SETS = {"musiccaps": "mc_", "redteam": "rt_"}
-JUDGES = ("cmi_qual", "cmi_ali", "aes_CE", "aes_CU", "aes_PC", "aes_PQ")
+JUDGES = ("cmi_qual", "cmi_ali", "mulan", "aes_CE", "aes_CU", "aes_PC", "aes_PQ")
+Q2_JUDGES = ("mulan", "cmi_qual", "cmi_ali", "aes_CE")   # pre-registered (tasks/decisions.md)
+SAME_WINNER_MIN = 0.90
 
 
 def load_corpus(d):
@@ -40,36 +45,59 @@ def frontier(recs, judge):
         secondary = {j: {s: aggregate(_rows(v, j, cps, keep or 1.0))["regret"] for s, v in split.items()}
                      for j in judges if j != judge}
         scheds.append({"first": first, "keep": keep, "checkpoints": cps, "sets": sets, "secondary": secondary})
-    ok = [s for s in scheds if s["sets"]["musiccaps"]["regret"]["lo"] <= 0]
+    ok = [s for s in scheds if s["sets"]["musiccaps"]["same_winner"]["mean"] >= SAME_WINNER_MIN]
     rec = min(ok, key=lambda s: s["sets"]["musiccaps"]["compute"]["mean"])
+    selection = {j: {s: aggregate([selection_metrics(r["scores"]["clap"]["30"], r["scores"][j]) for r in v])
+                     for s, v in split.items()} for j in judges if j in Q2_JUDGES}
     return {"pruner": "clap", "judge": judge, "secondary_judges": [j for j in judges if j != judge],
             "n": {s: len(v) for s, v in split.items()}, "schedules": scheds,
             "recommended": {"first": rec["first"], "keep": rec["keep"],
-                            "rule": "cheapest MusicCaps compute with regret CI lo <= 0"}}
+                            "rule": f"cheapest MusicCaps compute with same-winner >= {SAME_WINNER_MIN}"},
+            "selection": selection}
 
 
 def plot(res, path):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(figsize=(6.5, 4.2))
-    for (s, c), dx in zip({"musiccaps": "#2b6cb0", "redteam": "#c05621"}.items(), (0, 0.004)):
-        pts = [x for x in res["schedules"] if s in x["sets"]]
+    colors = {"musiccaps": "#2b6cb0", "redteam": "#c05621"}
+    fig, (q1, q2) = plt.subplots(1, 2, figsize=(11, 4.4), gridspec_kw={"width_ratios": [1.15, 1]})
+    for s, c in colors.items():
+        pts = [x for x in res["schedules"] if s in x["sets"] and x["first"] is not None]
         if not pts:
             continue
-        xs = [x["sets"][s]["compute"]["mean"] + dx for x in pts]
-        ys = [x["sets"][s]["regret"]["mean"] for x in pts]
-        err = [[y - x["sets"][s]["regret"]["lo"] for x, y in zip(pts, ys)],
-               [x["sets"][s]["regret"]["hi"] - y for x, y in zip(pts, ys)]]
-        ax.errorbar(xs, ys, yerr=err, fmt="o", color=c, capsize=3, label=f"{s} (n={res['n'][s]})")
-        for x, xv, yv in zip(pts, xs, ys):
-            ax.annotate("unpruned" if x["first"] is None else f"{x['first']}s/{x['keep']}",
-                        (xv, yv), fontsize=7, xytext=(4, 3), textcoords="offset points", color=c)
-    ax.axhline(0, color="gray", lw=0.8)
-    ax.set_xlabel("compute (candidate-seconds / 8 x 30 s)")
-    ax.set_ylabel(f"regret, {res['judge']} (best-of-8 - pruned)")
-    ax.set_title("CLAP-pruned best-of-8: compute vs regret, 95% bootstrap CI", fontsize=10)
-    ax.legend(fontsize=8)
+        xs = [x["sets"][s]["compute"]["mean"] for x in pts]
+        ys = [x["sets"][s]["same_winner"]["mean"] for x in pts]
+        err = [[y - x["sets"][s]["same_winner"]["lo"] for x, y in zip(pts, ys)],
+               [x["sets"][s]["same_winner"]["hi"] - y for x, y in zip(pts, ys)]]
+        q1.errorbar(xs, ys, yerr=err, fmt="o", color=c, capsize=3, alpha=0.9, label=f"{s} (n={res['n'][s]})")
+        if s == "musiccaps":
+            for x, xv, yv in zip(pts, xs, ys):
+                q1.annotate(f"{x['first']}s/{x['keep']}", (xv, yv), fontsize=7, xytext=(5, -9),
+                            textcoords="offset points", color=c)
+    q1.axhline(SAME_WINNER_MIN, color="gray", lw=0.8, ls="--")
+    q1.text(0.33, SAME_WINNER_MIN + 0.01, f"rule: same-winner >= {SAME_WINNER_MIN}", fontsize=7, color="gray")
+    q1.set_xlabel("compute (candidate-seconds / 8 x 30 s)")
+    q1.set_ylabel("P(pruned winner = unpruned CLAP pick)")
+    q1.set_title("Q1 pruning fidelity, 95% bootstrap CI", fontsize=10)
+    q1.set_ylim(-0.05, 1.08)
+    q1.legend(fontsize=8, loc="lower right")
+    judges = list(res["selection"])
+    for k, (s, c) in enumerate(colors.items()):
+        if s not in res["n"]:
+            continue
+        ys = [k * 0.35 + i for i in range(len(judges))]
+        g = [res["selection"][j][s]["gain_vs_random"] for j in judges]
+        o = [res["selection"][j][s]["oracle_gain"]["mean"] for j in judges]
+        q2.errorbar([x["mean"] for x in g], ys, xerr=[[x["mean"] - x["lo"] for x in g], [x["hi"] - x["mean"] for x in g]],
+                    fmt="o", color=c, capsize=3, label=f"CLAP pick, {s} (n={res['n'][s]})")
+        q2.scatter(o, ys, marker="|", s=120, color=c, label=f"oracle, {s}")
+    q2.axvline(0, color="gray", lw=0.8)
+    q2.set_yticks([i + 0.175 for i in range(len(judges))], judges, fontsize=8)
+    q2.invert_yaxis()
+    q2.set_xlabel("judge score gain over a random candidate (judge units)")
+    q2.set_title("Q2 selection value: unpruned CLAP best-of-8", fontsize=10)
+    q2.legend(fontsize=7, loc="lower right")
     fig.tight_layout()
     fig.savefig(path, dpi=150)
 
@@ -91,8 +119,15 @@ def main():
         mc = s["sets"]["musiccaps"]
         print(f"first={s['first']} keep={s['keep']}: compute {mc['compute']['mean']:.3f}  "
               f"regret {mc['regret']['mean']:+.3f} [{mc['regret']['lo']:+.3f}, {mc['regret']['hi']:+.3f}]  "
-              f"same {mc['same_winner']['mean']:.2f}  false-kill {mc['false_kill']['mean']:.2f}")
+              f"same {mc['same_winner']['mean']:.2f}  false-kill {mc['false_kill']['mean']:.2f}  "
+              f"survivors {mc['survivors']['mean']:.1f}")
     print("recommended:", res["recommended"], "n:", res["n"], "judge:", judge)
+    for j, sets in res["selection"].items():
+        print(f"Q2 {j}: " + "  ".join(
+            f"{s} gain {m['gain_vs_random']['mean']:+.3f} [{m['gain_vs_random']['lo']:+.3f}, "
+            f"{m['gain_vs_random']['hi']:+.3f}] oracle {m['oracle_gain']['mean']:+.3f} "
+            f"rho {m['spearman']['mean']:+.2f} [{m['spearman']['lo']:+.2f}, {m['spearman']['hi']:+.2f}]"
+            for s, m in sets.items()))
 
 
 if __name__ == "__main__":

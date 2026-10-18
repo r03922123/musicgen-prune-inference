@@ -2,3 +2,5 @@
 __pycache__/
 *.py[oc]
 *.wav
+data/wavs/
+data/wavs_dl/

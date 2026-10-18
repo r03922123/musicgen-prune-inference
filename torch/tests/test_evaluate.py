@@ -69,6 +69,7 @@ def test_toy_prompt_metrics():
     assert m["same_winner"] == 0.0
     assert m["false_kill"] == 0.5                    # judge top-2 = {3, 2}; row 3 was pruned
     assert m["spearman"] == pytest.approx(0.2)       # pruner @10s vs judge: ranks [1,4,3,2] vs [1,2,3,4]
+    assert m["survivors"] == 1                       # false-kill >= 0.5 whenever this is 1
 
 
 def test_unpruned_schedule_has_zero_regret():
@@ -95,7 +96,7 @@ def test_bootstrap_drops_nan():
 def test_aggregate_reports_every_metric_with_n():
     rows = [prompt_metrics(EARLY, FINAL, JUDGE, [10, 20], 0.5)] * 3
     agg = aggregate(rows)
-    assert set(agg) == {"compute", "regret", "oracle_regret", "same_winner", "false_kill", "spearman"}
+    assert set(agg) == {"compute", "regret", "oracle_regret", "same_winner", "false_kill", "spearman", "survivors"}
     assert agg["regret"]["mean"] == pytest.approx(-2.0) and agg["regret"]["n"] == 3
 
 
@@ -105,3 +106,22 @@ def test_bootstrap_all_nan_is_empty_not_a_warning():
         warnings.simplefilter("error")
         ci = bootstrap_ci(np.array([np.nan, np.nan]))
     assert ci["n"] == 0 and np.isnan(ci["mean"])
+
+
+# Q2 selection value (tasks/decisions.md, Day 2): toy prompt, pruner FINAL [.9, .2, .3, .1]
+# picks row 0. Judge [2, 4, 3, 1]: mean 2.5, so gain vs a uniformly random candidate =
+# 2 - 2.5 = -0.5; oracle gain = 4 - 2.5 = 1.5; Spearman(FINAL, judge) on ranks
+# [4,2,3,1] vs [2,4,3,1] = 1 - 6*(4+4+0+0)/(4*15) = 0.2.
+def test_toy_selection_metrics():
+    from evaluate import selection_metrics
+    m = selection_metrics(FINAL, [2, 4, 3, 1])
+    assert m["gain_vs_random"] == pytest.approx(-0.5)
+    assert m["oracle_gain"] == pytest.approx(1.5)
+    assert m["spearman"] == pytest.approx(0.2)
+
+
+def test_selection_constant_pruner_picks_row_0_and_spearman_is_nan():
+    from evaluate import selection_metrics
+    m = selection_metrics([.5, .5, .5, .5], [2, 4, 3, 1])   # ties: first row picked
+    assert m["gain_vs_random"] == pytest.approx(-0.5) and m["oracle_gain"] == pytest.approx(1.5)
+    assert m["spearman"] != m["spearman"]                     # constant input: NaN, dropped by bootstrap
