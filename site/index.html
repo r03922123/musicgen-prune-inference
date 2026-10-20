@@ -163,6 +163,7 @@
           Written for readers who know ML basics but not generative audio</p>
       </header>
 
+      <aside class="side"><span class="side-tag">How to read this</span><b>Notes in the margin</b><p><span class="side-tag" style="display:inline">Primer</span> notes explain an ML or audio fundamental; <span class="side-tag" style="display:inline">Worked example</span> notes show the arithmetic behind a number. Every figure from this project is <i>measured</i> on the corpus and cites its results file; claims about serving systems are marked as hypotheses.</p></aside>
       <aside class="tldr">
         <h2>TL;DR</h2>
         <ul>
@@ -196,10 +197,12 @@
       </nav>
 
       <h2 id="s-sampling">1. Why one prompt isn't one song</h2>
+      <aside class="side"><span class="side-tag">Primer</span><b>Sampling, in one line</b><p>At every step the model outputs a probability for each possible next token, and one is drawn at random. The takes here use top-k 250 (draw only from the 250 most likely tokens) at temperature 1.0. The random seed decides every draw, so a new seed means a new song.</p></aside>
       <p>A text-to-music model doesn't compute <i>the</i> song for "lo-fi hip hop with warm piano". It defines a
         probability distribution over songs and draws one sample. Change the random seed and you get a different
         arrangement, a different melody, sometimes a different genre. Some samples are great; some drift, clip, or
         go silent. (One of the 400 takes in this project is almost completely silent.)</p>
+      <aside class="side"><span class="side-tag">Primer</span><b>Why best-of-N has diminishing returns</b><p>If take quality were normally distributed, the expected best of N grows only about as fast as √(2 ln N): going from 8 to 16 takes adds far less than going from 1 to 2. That's why cheaper ways to search over takes matter more than simply raising N.</p></aside>
       <p>The cheapest reliable way to raise quality without retraining is the same trick used in LLM serving:
         <b>best-of-N</b>. Generate N candidates, score each with a model, keep the top one. Recent music work reports
         the expected reward rising steadily with N, with smaller gains per doubling
@@ -217,6 +220,8 @@
       </div>
 
       <h2 id="s-generators">2. Generators: past, present, future</h2>
+      <aside class="side"><span class="side-tag">Primer</span><b>Neural audio codecs</b><p>A codec like EnCodec is an autoencoder whose bottleneck is discrete. Each frame of audio is encoded by residual vector quantization: a first codebook captures the coarse sound, each further codebook encodes what the previous ones missed. 32 kHz audio becomes 4 × 50 = 200 tokens per second, about 160× fewer numbers than the waveform.</p></aside>
+      <aside class="side"><span class="side-tag">Primer</span><b>Delay pattern</b><p>MusicGen predicts all 4 codebooks in one pass by shifting codebook k by k steps, so at each step the coarse token of frame t is generated alongside finer tokens of earlier frames. One model, one pass, no cascade of separate models.</p></aside>
       <div class="era">
         <div class="era-col">
           <p class="era-tag">Past · 2018–2022</p>
@@ -248,6 +253,8 @@
             (<a href="https://www.vision.caltech.edu/psp">Progressive Seed Pruning</a> does this for images).</p>
         </div>
       </div>
+      <aside class="side"><span class="side-tag">Primer</span><b>Classifier-free guidance (CFG)</b><p>To follow the prompt more closely, the model runs twice per step, with and without the text, and pushes the prediction away from the unconditioned one (scale 3.0 here). It doubles the batch: "batch 1" in the profiler is really 2 rows.</p></aside>
+      <aside class="side"><span class="side-tag">Primer</span><b>Diffusion vs autoregressive</b><p>Autoregressive models write tokens left to right in time. Diffusion models start from noise over the whole clip and denoise it in many steps, so an early draft covers the full 30 s at low detail.</p></aside>
       <p><b>Where it's heading.</b> Three directions look most consequential for anyone serving these models:
         (1) <b>inference-time scaling</b>, spending compute on smarter search over samples rather than bigger models;
         (2) <b>preference fine-tuning</b> (RLHF/DPO-style) on human choices, so a single sample is good more often and
@@ -255,6 +262,8 @@
         hidden state, and estimate the final score, so pruning decisions don't depend on a general-purpose judge.</p>
 
       <h2 id="s-critics">3. Critics: how machines judge music</h2>
+      <aside class="side"><span class="side-tag">Primer</span><b>Contrastive embeddings (CLIP, CLAP)</b><p>Two encoders, one for audio and one for text, are trained so matching audio–caption pairs land close together and mismatched pairs far apart. The cosine similarity between a clip and a caption then works as a zero-shot "does this match?" score.</p></aside>
+      <aside class="side"><span class="side-tag">Primer</span><b>Reward models</b><p>A reward model is trained on human choices ("A sounds better than B") to output a score whose differences predict those choices. It's the same object used to align LLMs with RLHF, applied to music.</p></aside>
       <p>Best-of-N is only as good as the scorer. Music is a hard case: "good" mixes text fidelity (did it follow the
         prompt?), production quality, and taste. The judges available have changed a lot in three years.</p>
       <div class="era">
@@ -282,6 +291,8 @@
             human votes between models at scale.</p>
         </div>
       </div>
+      <aside class="side"><span class="side-tag">Primer</span><b>Spearman ρ, within vs between</b><p>Spearman's ρ is the correlation of ranks (1 = identical order, 0 = unrelated). <i>Between</i> prompts compares each prompt's average score: do two judges agree which prompts went well? <i>Within</i> a prompt compares the order of its eight takes, which is what picking a winner needs.</p></aside>
+      <aside class="side"><span class="side-tag">Primer</span><b>Bootstrap confidence intervals</b><p>Every CI here resamples the prompts with replacement 10,000 times and recomputes the statistic; the middle 95% of results is the interval. With only 40 prompts, intervals are wide, and they're shown on purpose.</p></aside>
       <p>The uncomfortable finding: <b>critics agree on which prompts go well but not on which take is best.</b>
         Across prompts, CLAP and MuQ-MuLan correlate at ρ = <span data-num="agreement/clap~mulan/between" data-fmt="f2"></span>.
         Within a prompt, ranking the eight takes, the same pair correlates at
@@ -294,6 +305,8 @@
         you're measuring how much a model agrees with itself.</blockquote>
 
       <h2 id="s-pruning">4. Early pruning, and the game you just played</h2>
+      <aside class="side"><span class="side-tag">Worked example</span><b>Where 58% comes from</b><p>Eight takes for the first 10 s, four for the next 10 s, two for the last 10 s: 8·10 + 4·10 + 2·10 = 140 take-seconds instead of 8·30 = 240. 140 / 240 ≈ 58%.</p></aside>
+      <aside class="side"><span class="side-tag">Primer</span><b>The KV cache</b><p>A Transformer decoder stores the keys and values of every past token so each new step attends to them without recomputation. Each take is one row of that cache; pruning deletes rows, so every later step processes fewer of them.</p></aside>
       <p>Early pruning is <b>successive halving</b>, the idea behind
         <a href="https://arxiv.org/abs/1603.06560">Hyperband</a> for hyperparameter search and, more recently,
         <a href="https://arxiv.org/abs/2410.20290">Speculative Rejection</a> for LLM best-of-N: run all candidates a
@@ -306,18 +319,21 @@
         <li><b>Shrinking the cache.</b> Dropped takes are removed from the Transformer's key/value cache, so later steps
           really do less work.</li>
       </ul>
+      <aside class="side"><span class="side-tag">Worked example</span><b>Bracket vs top-k</b><p>Top-k keeps the best half of all survivors. A bracket keeps the winner of each pair. With 8 takes there are exactly 8! / 2⁷ = 315 distinct draws, so the cost of an unlucky draw is computed exactly, not sampled.</p></aside>
       <p>Your bracket is the same algorithm with you as the scorer: 10 s, 20 s, then 30 s, keeping half each round.
         The one difference is pairing. Pruning keeps the top half of all survivors; a bracket keeps the winner of each
         pair, so an unlucky draw can pit the two best takes against each other in round one.</p>
       <div id="findings" class="findings"></div>
 
       <h2 id="s-systems">5. Compute is not latency</h2>
+      <aside class="side"><span class="side-tag">Primer</span><b>Kernel launch overhead</b><p>The CPU tells the GPU what to do one kernel (small GPU program) at a time, and each launch costs microseconds of CPU work. When a step is ~500 tiny kernels, the GPU finishes each one and sits idle waiting for the next. A CUDA graph records the whole sequence once and replays it with a single launch.</p></aside>
       <p>A profiler trace on a T4 GPU shows why pruning saved less wall-clock time than compute. One decoding step
         takes <span data-num="profile_b1/wall_ms_per_step" data-fmt="f1"></span> ms, but the GPU is busy for only
         <span data-num="profile_b1/gpu_busy_ms_per_step" data-fmt="f1"></span> ms of it. The step launches about
         <span data-num="profile_b1/kernels_per_step" data-fmt="int"></span> tiny GPU kernels, and the GPU waits for the
         CPU to dispatch each one. Dropping takes shrinks the kernels, not their number, so at small batch sizes the
         saving barely shows.</p>
+      <aside class="side"><span class="side-tag">Primer</span><b>Continuous batching</b><p>Serving systems keep a GPU batch full by inserting new requests as soon as old ones finish, instead of waiting for the whole batch. A pruned take finishing early frees a slot for someone else, which is why pruning should show up as throughput.</p></aside>
       <p>Two consequences an engineer should take away. First, the standard fix is capturing the decode step as a
         <b>CUDA graph</b> so it's launched once instead of ~500 times; that's untested here, so any speedup is a
         hypothesis. Second, in a real serving system the win from pruning is probably <b>throughput, not latency</b>: a
@@ -336,6 +352,7 @@
         streaming platform the same machinery flips around: critics that rank takes can also triage catalogue
         ingestion (broken audio, silence, low production quality), though quality scores are not fraud detection and
         shouldn't be used as such.</p>
+      <aside class="side"><span class="side-tag">Primer</span><b>LUFS</b><p>Loudness Units relative to Full Scale measure perceived loudness, not peak level. Streaming services normalise tracks to a target loudness; every clip in this game is matched to −16 LUFS so the louder take can't win by default.</p></aside>
       <p><b>Trust and transparency.</b> In the same survey, 97% of 9,000 respondents couldn't tell fully AI-generated
         music from human music in a blind test, and 80% wanted it labelled. Platforms are responding with disclosure:
         Spotify adopted the DDEX standard for AI credits in 2025, avoiding a simple AI/not-AI binary
@@ -347,6 +364,7 @@
 
       <h2 id="s-beyond">7. Beyond generation: where else this applies in streaming</h2>
       <p>None of these components is specific to generated music. Each has a direct analogue in a streaming stack:</p>
+      <aside class="side"><span class="side-tag">Primer</span><b>Bradley–Terry</b><p>A model for pairwise choices: each item has a strength s, and P(i beats j) = sᵢ / (sᵢ + sⱼ). Fit to many brackets, it turns individual "this or that" picks into a ranking, the same model behind chess-style Elo ratings and LLM arenas.</p></aside>
       <div class="apps">
         <div><h3>Previews and skips</h3><p>"How early can you tell?" is the question behind skip prediction and
           preview clip selection: listeners decide in the first seconds. Spotify released 160M listening sessions to

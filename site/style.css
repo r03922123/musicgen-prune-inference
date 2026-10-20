@@ -228,3 +228,16 @@ blockquote { margin: 20px 0; padding: 4px 20px; border-left: 4px solid var(--acc
   .era, .apps, .qpair { grid-template-columns: 1fr; }
   .toc ol { columns: 1; }
 }
+
+/* margin notes: in the right gutter on wide screens, inline callouts on narrow ones */
+.side { display: block; background: var(--panel); border-radius: 10px; padding: 10px 14px; margin: 12px 0;
+        font-size: .84rem; line-height: 1.5; color: var(--muted); border-left: 3px solid var(--line); }
+.side b { display: block; color: var(--text); font-size: .9rem; margin-bottom: .2em; }
+.side p { margin: 0; line-height: 1.55 !important; }
+.side-tag { display: block; font-size: .66rem; text-transform: uppercase; letter-spacing: .12em; color: var(--accent); font-weight: 700; margin-bottom: .3em; }
+@media (min-width: 1180px) {
+  .post { max-width: 720px; }
+  .side { float: right; clear: right; width: 290px; margin: 4px -330px 14px 0; background: transparent;
+          border-left: 2px solid var(--line); padding: 2px 0 2px 14px; border-radius: 0; }
+  .post h2 { clear: none; }
+}
