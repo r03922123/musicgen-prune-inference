@@ -4,3 +4,4 @@ __pycache__/
 *.wav
 data/wavs/
 data/wavs_dl/
+site/audio/

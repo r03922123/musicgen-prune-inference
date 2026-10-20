@@ -17,5 +17,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "pyloudnorm>=0.2.0",
     "pytest>=9.1.1",
 ]
