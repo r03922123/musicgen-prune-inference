@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eight Takes</title>
+<meta name="description" content="A listening game about how AI music gets picked: eight AI-generated takes of one prompt, a 10/20/30-second knockout bracket, and an AI picker to beat.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#" data-nav="home" aria-label="Eight Takes, home">
+    <span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span> Eight Takes
+  </a>
+  <nav>
+    <a href="#" data-nav="home">Play</a>
+    <a href="#how" data-nav="how">How it works</a>
+  </nav>
+</header>
+
+<main>
+  <!-- HOME -->
+  <section id="home" class="view">
+    <div class="hero">
+      <p class="eyebrow">A listening game about AI music</p>
+      <h1>Eight takes. <span>One champion.</span></h1>
+      <p class="lede">An AI model wrote eight versions of the same song. Knock them out two at a time,
+        hearing <b>10 s</b>, then <b>20 s</b>, then the full <b>30 s</b>, and crown your favourite.
+        Then see whether the AI picker agreed with you, and what four AI critics thought.</p>
+      <div class="cta">
+        <button class="btn primary" id="start-random">Play a random prompt</button>
+        <button class="btn" id="start-slow">Try a slow-build challenge</button>
+      </div>
+      <ol class="steps">
+        <li><b>Quarter-finals</b><span>8 takes → 4 · 10 s clips</span></li>
+        <li><b>Semi-finals</b><span>4 → 2 · 20 s clips</span></li>
+        <li><b>Final</b><span>2 → 1 · full 30 s</span></li>
+      </ol>
+    </div>
+
+    <div class="shelf-head">
+      <h2>Pick a prompt</h2>
+      <div class="filters" role="group" aria-label="Filter prompts">
+        <button class="chip on" data-filter="all">All</button>
+        <button class="chip" data-filter="musiccaps">MusicCaps captions</button>
+        <button class="chip" data-filter="redteam">Slow builds</button>
+      </div>
+    </div>
+    <div id="shelf" class="shelf"></div>
+  </section>
+
+  <!-- GAME -->
+  <section id="game" class="view" hidden>
+    <div class="game-head">
+      <div>
+        <p class="eyebrow" id="round-label">Quarter-finals</p>
+        <h2 id="match-label">Match 1 of 4</h2>
+      </div>
+      <div class="pill" id="clip-label">10 s clips</div>
+    </div>
+    <details class="caption">
+      <summary><span class="muted">Prompt:</span> <span id="prompt-title"></span></summary>
+      <p id="prompt-caption"></p>
+    </details>
+
+
+    <div class="match">
+      <article class="take" id="take-a">
+        <div class="cover" aria-hidden="true"></div>
+        <h3>Take <span class="tid"></span></h3>
+        <div class="bar"><i></i></div>
+        <div class="row">
+          <button class="btn play" data-side="a">▶ Play <kbd>Q</kbd></button>
+          <button class="btn primary pick" data-side="a" disabled>Keep this one <kbd>1</kbd></button>
+        </div>
+      </article>
+      <div class="vs" aria-hidden="true">vs</div>
+      <article class="take" id="take-b">
+        <div class="cover" aria-hidden="true"></div>
+        <h3>Take <span class="tid"></span></h3>
+        <div class="bar"><i></i></div>
+        <div class="row">
+          <button class="btn play" data-side="b">▶ Play <kbd>W</kbd></button>
+          <button class="btn primary pick" data-side="b" disabled>Keep this one <kbd>2</kbd></button>
+        </div>
+      </article>
+    </div>
+    <div class="match-foot">
+      <button class="btn ghost" id="play-both">▶ Play both</button>
+      <button class="btn ghost" id="tie" disabled>Can't decide (coin flip) <kbd>0</kbd></button>
+    </div>
+    <p class="hint" id="hint" aria-live="polite">Listen to both takes, then keep the one you'd rather keep listening to.</p>
+  </section>
+
+  <!-- INTERMISSION -->
+  <section id="intermission" class="view" hidden>
+    <div class="inter">
+      <p class="eyebrow" id="inter-eyebrow">Quarter-finals done</p>
+      <h2 id="inter-title">4 takes advance</h2>
+      <p class="lede" id="inter-text"></p>
+      <div class="bracket big" id="inter-bracket"></div>
+      <button class="btn primary" id="next-round">Start the semi-finals</button>
+    </div>
+  </section>
+
+  <!-- REVEAL -->
+  <section id="reveal" class="view" hidden>
+    <div class="champion">
+      <div class="cover big" id="champ-cover" aria-hidden="true"></div>
+      <div>
+        <p class="eyebrow">Your champion</p>
+        <h1 id="champ-title">Take A</h1>
+        <p class="muted" id="champ-prompt"></p>
+        <div class="cta">
+          <button class="btn primary" id="champ-play">▶ Play the full 30 s</button>
+          <button class="btn" id="share">Copy result</button>
+          <button class="btn ghost" id="again">Play another</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="cards">
+      <article class="card" id="card-machine">
+        <h3>You vs the AI picker</h3>
+        <p class="big-num" id="agree-num">5/7</p>
+        <p id="agree-text"></p>
+        <div id="machine-bracket" class="bracket small"></div>
+      </article>
+      <article class="card" id="card-time">
+        <h3>What a knockout saves</h3>
+        <p class="big-num" id="time-num">220 s</p>
+        <p id="time-text"></p>
+      </article>
+      <article class="card" id="card-early">
+        <h3>Early knockouts</h3>
+        <p id="early-text"></p>
+      </article>
+    </div>
+
+    <h2 class="section-title">The critics' panel</h2>
+    <p class="muted">Four independent AI judges scored all eight takes in full. None of them was used to cut takes,
+      so they're fair referees for both you and the AI picker. Rank 1 = their favourite of the eight.</p>
+    <div class="critics" id="critics"></div>
+
+    <h2 class="section-title">All eight takes</h2>
+    <div class="tracklist" id="tracklist"></div>
+  </section>
+
+  <!-- HOW -->
+  <section id="how" class="view" hidden>
+    <article class="prose">
+      <p class="eyebrow">How it works</p>
+      <h1>Why a knockout?</h1>
+      <p>Text-to-music models make a different song every time. A common trick is <b>best-of-N</b>:
+        generate several takes, score them, and keep the best. It works, but every take costs a full
+        generation, so eight takes cost eight times as much.</p>
+      <p><b>Early pruning</b> cuts takes that look weak partway through, so the losers are never finished.
+        This game is that algorithm, with you as the judge: 10 s clips decide the quarter-finals, 20 s the
+        semi-finals, and the full 30 s the final. The AI picker plays the same bracket using
+        <a href="https://huggingface.co/laion/clap-htsat-unfused">CLAP</a>, a model that scores how well
+        audio matches a text description.</p>
+
+      <h2>What the experiments found</h2>
+      <div id="findings" class="findings"></div>
+
+      <h2>Where the music comes from</h2>
+      <p>Every take was made in advance with <a href="https://huggingface.co/facebook/musicgen-small">MusicGen-small</a>
+        (30 s, eight takes per prompt) on a single GPU. Nothing is generated while you play. Prompts are
+        40 captions from <a href="https://huggingface.co/datasets/google/MusicCaps">MusicCaps</a> plus 10
+        hand-written "slow-build" prompts (orchestral build-ups, post-rock crescendos) chosen because their best
+        moments arrive late, which is exactly where judging early goes wrong. Each take's loudness is matched with
+        one fixed gain, so louder can't win and crescendos keep their shape.</p>
+
+      <h2>The critics</h2>
+      <ul id="critic-list"></ul>
+
+      <h2>Related work</h2>
+      <ul>
+        <li><a href="https://arxiv.org/abs/2507.20900">Music Arena</a> (NeurIPS 2025): live pairwise human votes
+          between text-to-music <i>models</i>. Here, you compare <i>takes from one model</i>, with clips that grow each round.</li>
+        <li><a href="https://arxiv.org/abs/2410.20290">Fast Best-of-N Decoding via Speculative Rejection</a>: early
+          pruning of unpromising generations, for language models.</li>
+        <li><a href="https://newsroom-deezer.com/2025/11/deezer-ipsos-survey-ai-music/">Deezer/Ipsos survey</a>
+          (9,000 people, 2025): 97% couldn't tell fully AI-generated music from human music; 80% want it labelled.</li>
+      </ul>
+
+      <h2>Honest limits</h2>
+      <ul>
+        <li>Small samples: 40 MusicCaps prompts and 10 slow-build prompts. Every number above shows its n.</li>
+        <li>The critics measure different things (text match vs enjoyment vs quality) and often disagree.</li>
+        <li>Your games stay in your browser. Nothing is sent anywhere.</li>
+      </ul>
+      <p><a href="https://github.com/r03922123/musicgen-prune-mlx">Code, data and full results on GitHub</a>.</p>
+    </article>
+  </section>
+</main>
+
+<div class="player" id="player" aria-live="off">
+  <div class="cover tiny" id="np-cover" aria-hidden="true"></div>
+  <div class="np"><b id="np-title">Nothing playing</b><span id="np-sub" class="muted">Pick a prompt to start</span></div>
+  <button class="btn round" id="np-toggle" aria-label="Stop" disabled>■</button>
+  <div class="np-bar"><i id="np-fill"></i></div>
+  <span class="muted np-time" id="np-time">0:00 / 0:00</span>
+</div>
+
+<footer>
+  <p>AI-generated music, made with MusicGen-small (weights CC-BY-NC 4.0, non-commercial). MusicCaps captions
+    CC BY-SA 4.0. A personal research project, not affiliated with any company or streaming service.</p>
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
