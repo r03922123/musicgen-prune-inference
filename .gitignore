@@ -5,3 +5,4 @@ __pycache__/
 data/wavs/
 data/wavs_dl/
 site/audio/
+node_modules/

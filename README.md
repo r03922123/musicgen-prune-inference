@@ -248,6 +248,11 @@ uv run python torch/build_site.py                   # site/data.json + site/audi
 node --test site/tests                              # JS game logic == results/bracket.json
 ```
 
+The site deploys itself: every push to `master` that touches `site/`, the results or the corpus
+runs `.github/workflows/site.yml`, which deploys to GitHub Pages only if all tests and a full
+browser game pass. The 400 MP3s are not in git; they are the Release asset pinned in
+`site/audio.lock` (rebuild with `torch/build_site.py`, then publish a new `site-audio-vN`).
+
 GPU jobs run on Kaggle (one file per kernel; sources are embedded by `kaggle_job/bundle.py`):
 `kaggle_job/` (self-check + steps bench), `kaggle_corpus/` (the corpus), `kaggle_judge/` and
 `kaggle_cmi/` (judge scoring of the saved WAVs, which the corpus kernel's output provides as
@@ -268,7 +273,8 @@ and untar into `data/wavs/`.
 | `torch/listen.py` | blind A/B listening test |
 | `torch/profile_decode.py` | torch.profiler breakdown of decode steps |
 | `torch/bracket.py`, `torch/build_site.py` | bracket simulation; game data and audio export |
-| `site/` | Eight Takes listening game (static; deployed from the `gh-pages` branch) |
+| `site/` | Eight Takes listening game (static) |
+| `.github/workflows/site.yml`, `site/audio.lock` | site CI: tests, data.json reproducibility check, audio fetched from a pinned Release and hash-checked, browser smoke test, Pages deploy |
 | `vendor/` | unmodified MusicGen / EnCodec / T5 from ml-explore/mlx-examples (MIT) |
 
 ## Limitations

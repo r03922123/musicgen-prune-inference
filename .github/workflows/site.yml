@@ -1,0 +1,80 @@
+# Builds, tests and deploys the Eight Takes site (site/) to GitHub Pages.
+# Audio comes from the GitHub Release pinned in site/audio.lock (the WAVs it is built from live on
+# Kaggle, not in this repo); everything else is built from committed files.
+name: site
+
+on:
+  push:
+    branches: [master]
+    paths: ["site/**", "torch/build_site.py", "torch/evaluate.py", "torch/frontier.py",
+            "torch/bracket.py", "torch/tests/**", "results/**", "data/corpus/*.json",
+            ".github/workflows/site.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Python tests (evaluation, bracket, site build)
+        run: |
+          pip install --quiet numpy scipy pyloudnorm pytest
+          python -m pytest -q torch/tests/test_evaluate.py torch/tests/test_frontier.py torch/tests/test_build_site.py
+      - name: data.json is reproducible from committed results
+        run: |
+          python torch/build_site.py --no-audio
+          git diff --exit-code site/data.json
+
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - name: JS tests (game logic == results/bracket.json)
+        run: node --test site/tests/
+
+      - name: Fetch and verify audio
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          . <(grep -E '^(tag|asset|sha256)=' site/audio.lock)
+          gh release download "$tag" --pattern "$asset" --dir "$RUNNER_TEMP"
+          echo "$sha256  $RUNNER_TEMP/$asset" | sha256sum --check
+          tar -xf "$RUNNER_TEMP/$asset" -C site
+          test "$(ls site/audio/*.mp3 | wc -l)" -eq 400
+
+      - name: Assemble the site
+        run: |
+          mkdir _site
+          cp -R site/index.html site/style.css site/app.js site/bracket.js site/data.json site/fonts site/audio _site/
+          touch _site/.nojekyll
+
+      - name: Browser smoke test (full game, desktop and mobile)
+        run: |
+          npm install --no-save --silent playwright
+          npx playwright install --with-deps --only-shell chromium > /dev/null
+          python -m http.server 8765 --bind 127.0.0.1 --directory _site > /dev/null 2>&1 &
+          sleep 1
+          node site/tests/smoke.mjs http://127.0.0.1:8765/ "$RUNNER_TEMP"
+
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: _site }
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
