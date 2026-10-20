@@ -41,7 +41,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "22" }
       - name: JS tests (game logic == results/bracket.json)
-        run: node --test site/tests/
+        run: node --test site/tests/*.test.mjs
 
       - name: Fetch and verify audio
         env: { GH_TOKEN: "${{ github.token }}" }

@@ -245,7 +245,7 @@ uv run python torch/agreement.py                    # exploratory judge agreemen
 uv run python torch/listen.py                       # blind A/B test (needs data/wavs/, see below)
 uv run python torch/bracket.py                      # the game's bracket vs top-k, all 315 draws
 uv run python torch/build_site.py                   # site/data.json + site/audio/*.mp3 (needs ffmpeg)
-node --test site/tests                              # JS game logic == results/bracket.json
+node --test site/tests/*.test.mjs                    # JS game logic == results/bracket.json
 ```
 
 The site deploys itself: every push to `master` that touches `site/`, the results or the corpus
