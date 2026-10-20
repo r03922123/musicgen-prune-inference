@@ -73,6 +73,49 @@ def selection_metrics(final, judge):
             "spearman": rho}
 
 
+def all_brackets(rows):
+    """Every distinct single-elimination bracket over rows (an int n means range(n), n a power
+    of 2), as seedings: adjacent pairs meet in round 1, adjacent winners in round 2, ...
+    n!/2^(n-1) of them: 1, 3, 315 for n = 2, 4, 8."""
+    rows = list(range(rows)) if isinstance(rows, int) else list(rows)
+    if len(rows) == 1:
+        return [tuple(rows)]
+    from itertools import combinations
+    first, rest, out = rows[0], rows[1:], []
+    for others in combinations(rest, len(rows) // 2 - 1):     # the half that holds rows[0]
+        a = [first, *others]
+        b = [r for r in rest if r not in others]
+        out += [x + y for x in all_brackets(a) for y in all_brackets(b)]
+    return out
+
+
+def bracket_champion(seeding, rounds):
+    """rounds[i]: (n,) scores used in round i (one round per halving); the higher score wins
+    each match, ties go to the lower row id."""
+    alive = list(seeding)
+    for s in rounds:
+        alive = [a if (s[a], -a) > (s[b], -b) else b for a, b in zip(alive[::2], alive[1::2])]
+    return alive[0]
+
+
+def bracket_metrics(early, final, judge, cps, horizon=30):
+    """The game's pruning (pairwise single elimination, one checkpoint per round, the final at
+    horizon) over all distinct brackets, vs top-k successive halving (keep 0.5) at the same
+    checkpoints and the unpruned pick, all by the same pruner scores.
+      same_as_unpruned / same_as_topk  share of brackets whose champion is that winner
+      regret / topk_regret             judge(unpruned pick) - judge(champion), bracket mean / top-k"""
+    judge = np.asarray(judge, dtype=float)
+    rounds = [early[t] for t in cps] + [final]
+    base = simulate(early, final, [], 1.0, horizon)["winner"]
+    topk = simulate(early, final, cps, 0.5, horizon)["winner"]
+    champs = [bracket_champion(b, rounds) for b in all_brackets(len(final))]
+    return {"brackets": len(champs),
+            "same_as_unpruned": float(np.mean([c == base for c in champs])),
+            "same_as_topk": float(np.mean([c == topk for c in champs])),
+            "regret": float(np.mean([judge[base] - judge[c] for c in champs])),
+            "topk_regret": float(judge[base] - judge[topk])}
+
+
 def bootstrap_ci(x, n_boot=10_000, seed=0, alpha=0.05):
     """Mean with a percentile bootstrap CI over prompts. NaNs (e.g. undefined Spearman) dropped."""
     x = np.asarray(x, dtype=float)
