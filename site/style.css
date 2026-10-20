@@ -1,3 +1,7 @@
+@font-face {
+  font-family: "DM Sans"; font-style: normal; font-weight: 400 700; font-display: swap;
+  src: url("fonts/dm-sans-latin.woff2") format("woff2");
+}
 :root {
   --bg: #0f0f12;
   --panel: #18181d;
@@ -241,3 +245,26 @@ blockquote { margin: 20px 0; padding: 4px 20px; border-left: 4px solid var(--acc
           border-left: 2px solid var(--line); padding: 2px 0 2px 14px; border-radius: 0; }
   .post h2 { clear: none; }
 }
+
+/* review fixes */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.progress { list-style: none; display: flex; gap: 6px; padding: 0; margin: 12px 0 0; }
+.progress li { flex: 1; height: 6px; border-radius: 3px; background: var(--panel-2); }
+.progress li.done { background: var(--accent); opacity: .55; }
+.progress li.cur { background: var(--accent); }
+.progress li.gap { flex: 0 0 8px; background: transparent; }
+.keys-toggle { display: block; text-align: center; color: var(--muted); font-size: .85rem; margin-top: 4px; }
+body.no-keys kbd, body.no-keys .keys { display: none; }
+.ios-hint { color: var(--accent); }
+.reveal-summary { font-size: 1.2rem; max-width: 70ch; margin: 4px 0 0; }
+.breakdown { margin-top: 18px; }
+.breakdown > summary { cursor: pointer; background: var(--panel); border-radius: var(--radius); padding: 14px 18px; font-weight: 700; list-style: none; }
+.breakdown > summary::-webkit-details-marker { display: none; }
+.breakdown > summary::before { content: "▸ "; color: var(--accent); }
+.breakdown[open] > summary::before { content: "▾ "; }
+.breakdown > summary .muted { font-weight: 400; }
+.tier { font-weight: 700; font-size: 1.4rem; }
+.tier.top { color: var(--good); } .tier.bottom { color: var(--bad); }
+.track .r.bottom { opacity: .6; }
+dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 24px; max-width: 360px; }
+dialog::backdrop { background: rgba(0,0,0,.55); }

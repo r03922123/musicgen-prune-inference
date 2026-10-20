@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Eight Takes</title>
 <meta name="description" content="A listening game about how AI music gets picked: eight AI-generated takes of one prompt, a 10/20/30-second knockout bracket, and an AI picker to beat.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -61,7 +59,8 @@
       </div>
       <div class="pill" id="clip-label">10 s clips</div>
     </div>
-    <details class="caption">
+    <ol class="progress" id="progress" aria-label="Game progress"></ol>
+    <details class="caption" id="caption" open>
       <summary><span class="muted">Prompt:</span> <span id="prompt-title"></span></summary>
       <p id="prompt-caption"></p>
     </details>
@@ -70,7 +69,7 @@
     <div class="match">
       <article class="take" id="take-a">
         <div class="cover" aria-hidden="true"></div>
-        <h3>Take <span class="tid"></span></h3>
+        <h3>Take <span class="tid"></span><span class="sr-only heard-sr"></span></h3>
         <div class="bar"><i></i></div>
         <div class="row">
           <button class="btn play" data-side="a">▶ Play <kbd>Q</kbd></button>
@@ -80,7 +79,7 @@
       <div class="vs" aria-hidden="true">vs</div>
       <article class="take" id="take-b">
         <div class="cover" aria-hidden="true"></div>
-        <h3>Take <span class="tid"></span></h3>
+        <h3>Take <span class="tid"></span><span class="sr-only heard-sr"></span></h3>
         <div class="bar"><i></i></div>
         <div class="row">
           <button class="btn play" data-side="b">▶ Play <kbd>W</kbd></button>
@@ -93,6 +92,8 @@
       <button class="btn ghost" id="tie" disabled>Can't decide (coin flip) <kbd>0</kbd></button>
     </div>
     <p class="hint" id="hint" aria-live="polite">Listen to both takes, then keep the one you'd rather keep listening to.</p>
+    <p class="hint ios-hint" id="ios-hint" hidden>On iPhone or iPad, switch off silent mode to hear the takes.</p>
+    <label class="keys-toggle"><input type="checkbox" id="keys-on" checked> Keyboard shortcuts</label>
   </section>
 
   <!-- INTERMISSION -->
@@ -122,6 +123,7 @@
       </div>
     </div>
 
+    <p class="reveal-summary" id="reveal-summary"></p>
     <div class="cards">
       <article class="card" id="card-machine">
         <h3>You vs the AI picker</h3>
@@ -140,13 +142,17 @@
       </article>
     </div>
 
+    <details class="breakdown" id="breakdown">
+    <summary><span>See the full breakdown</span> <span class="muted" id="breakdown-sub">the four critics and all eight takes</span></summary>
     <h2 class="section-title">The critics' panel</h2>
     <p class="muted">Four independent AI judges scored all eight takes in full. None of them was used to cut takes,
-      so they're fair referees for both you and the AI picker. Rank 1 = their favourite of the eight.</p>
+      so they're fair referees for both you and the AI picker. Takes are shown in tiers (top two, middle, bottom two)
+      rather than exact ranks: neighbouring takes are often closer than the critics' own noise.</p>
     <div class="critics" id="critics"></div>
 
     <h2 class="section-title">All eight takes</h2>
     <div class="tracklist" id="tracklist"></div>
+    </details>
   </section>
 
   <!-- HOW -->
@@ -202,7 +208,7 @@
         probability distribution over songs and draws one sample. Change the random seed and you get a different
         arrangement, a different melody, sometimes a different genre. Some samples are great; some drift, clip, or
         go silent. (One of the 400 takes in this project is almost completely silent.)</p>
-      <aside class="side"><span class="side-tag">Primer</span><b>Why best-of-N has diminishing returns</b><p>If take quality were normally distributed, the expected best of N grows only about as fast as √(2 ln N): going from 8 to 16 takes adds far less than going from 1 to 2. That's why cheaper ways to search over takes matter more than simply raising N.</p></aside>
+      <aside class="side"><span class="side-tag">Primer</span><b>Why best-of-N has diminishing returns</b><p>Intuition, not a law: if take scores were independent draws from one normal distribution, the expected best of N would grow roughly like √(2 ln N) for large N, so going from 8 to 16 takes adds far less than going from 1 to 2. Real takes aren't that tidy, but the diminishing returns show up in practice too. That's why cheaper ways to search over takes matter more than simply raising N.</p></aside>
       <p>The cheapest reliable way to raise quality without retraining is the same trick used in LLM serving:
         <b>best-of-N</b>. Generate N candidates, score each with a model, keep the top one. Recent music work reports
         the expected reward rising steadily with N, with smaller gains per doubling
@@ -333,7 +339,7 @@
         <span data-num="profile_b1/kernels_per_step" data-fmt="int"></span> tiny GPU kernels, and the GPU waits for the
         CPU to dispatch each one. Dropping takes shrinks the kernels, not their number, so at small batch sizes the
         saving barely shows.</p>
-      <aside class="side"><span class="side-tag">Primer</span><b>Continuous batching</b><p>Serving systems keep a GPU batch full by inserting new requests as soon as old ones finish, instead of waiting for the whole batch. A pruned take finishing early frees a slot for someone else, which is why pruning should show up as throughput.</p></aside>
+      <aside class="side"><span class="side-tag">Primer</span><b>Continuous batching</b><p>Serving systems keep a GPU batch full by inserting new requests as soon as old ones finish, instead of waiting for the whole batch. A pruned take finishing early frees a slot for someone else, which is why pruning should show up as throughput. Caveat: removing rows from a running batch (with CFG pairs and per-row KV caches) isn't standard in common serving stacks yet.</p></aside>
       <p>Two consequences an engineer should take away. First, the standard fix is capturing the decode step as a
         <b>CUDA graph</b> so it's launched once instead of ~500 times; that's untested here, so any speedup is a
         hypothesis. Second, in a real serving system the win from pruning is probably <b>throughput, not latency</b>: a
@@ -390,7 +396,11 @@
         <li><b>Small samples.</b> 40 MusicCaps prompts and 10 slow-build prompts; every number shows its n. Treat effects
           as directional.</li>
         <li><b>The critics disagree</b> and measure different things, so "better" is judge-dependent by design.</li>
-        <li><b>No human judgement yet.</b> Your games stay in your browser; nothing is collected. A future version with
+        <li><b>What you hear isn't exactly what CLAP scored.</b> CLAP scored each decoded prefix before loudness
+          matching; the game plays a cut of the full 30 s decode after loudness matching. The codec's context at the
+          cut point and the level change make the two slightly different.</li>
+        <li><b>No human judgement yet.</b> Your game choices stay in your browser; the site has no analytics, cookies
+          or third-party requests. A future version with
           consented, aggregated votes would give the human early-predictability curve this project is missing.</li>
         <li><b>Next experiments:</b> CMI-RM as the pruner instead of CLAP; the generator's own token probabilities as a
           free early signal; CUDA graphs to turn saved compute into saved time.</li>
@@ -401,6 +411,12 @@
   </section>
 </main>
 
+<dialog id="leave" aria-labelledby="leave-title">
+  <h2 id="leave-title">Leave this game?</h2>
+  <p class="muted">Your bracket so far will be lost.</p>
+  <div class="cta"><button class="btn primary" id="leave-stay" autofocus>Keep playing</button><button class="btn" id="leave-go">Leave</button></div>
+</dialog>
+
 <div class="player" id="player" aria-live="off">
   <div class="cover tiny" id="np-cover" aria-hidden="true"></div>
   <div class="np"><b id="np-title">Nothing playing</b><span id="np-sub" class="muted">Pick a prompt to start</span></div>
@@ -410,7 +426,7 @@
 </div>
 
 <footer>
-  <p>AI-generated music, made with MusicGen-small (weights CC-BY-NC 4.0, non-commercial). MusicCaps captions
+  <p>Font: DM Sans (<a href="fonts/OFL.txt">SIL Open Font License</a>), self-hosted. AI-generated music, made with MusicGen-small (weights CC-BY-NC 4.0, non-commercial). MusicCaps captions
     CC BY-SA 4.0. A personal research project, not affiliated with any company or streaming service.</p>
 </footer>
 

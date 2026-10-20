@@ -18,6 +18,10 @@ const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const fmtT = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const pct = (x) => `${Math.round(x * 100)}%`;
 const sgnless = (x, d = 2) => `${x < 0 ? "−" : ""}${Math.abs(x).toFixed(d)}`;
+const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+// Tiers instead of exact ranks: neighbouring takes are often within a critic's noise.
+const tier = (r) => (r <= 2 ? "top" : r >= 7 ? "bottom" : "middle");
+const TIER_LABEL = { top: "Top two", middle: "Middle", bottom: "Bottom two" };
 const sgn = (x, d = 2) => `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(d)}`;
 
 let DATA, G = null;           // G = current game
@@ -116,11 +120,15 @@ function renderShelf(filter = "all") {
 // ---------- game ----------
 function startGame(prompt) {
   audio.stop();
+  audio.cache.clear();                           // decoded takes are ~4 MB each; keep one prompt's worth
+  $("#caption").open = true;
+  $("#ios-hint").hidden = !IOS;
+  if (!G?.active) history.pushState({ game: true }, "", "#play");
   const seed = (Date.now() ^ (Math.random() * 2 ** 32)) >>> 0;
   const rand = rng(seed);
   const seeding = shuffle([...Array(prompt.n).keys()], rand);
   G = { prompt, seed, rand, seeding, round: 0, match: 0, alive: seeding, stages: [], matches: [],
-        listened: 0, started: Date.now() };
+        listened: 0, started: Date.now(), active: true };
   G.letter = (row) => LETTERS[seeding.indexOf(row)];
   G.key = (row) => `${prompt.id}:${G.letter(row)}`;
   $("#prompt-title").textContent = prompt.title;
@@ -132,6 +140,10 @@ function startGame(prompt) {
 
 function renderBracket(el, stages, seeding, { cur = [], letter, key }) {
   el.innerHTML = "";
+  el.setAttribute("role", "img");
+  el.setAttribute("aria-label", stages.length
+    ? stages.map((st, i) => `${ROUND_NAMES[i]}: ${st.map((r) => `Take ${letter(r)}`).join(", ")} advanced`).join(". ")
+    : `Eight takes: ${seeding.map((r) => letter(r)).join(", ")}`);
   const cols = [seeding, ...stages];
   while (cols.length < 4) cols.push(Array(cols.at(-1).length / 2 || 1).fill(null));
   cols.forEach((col, ci) => {
@@ -152,7 +164,8 @@ function renderMatch() {
   const r = G.round, sec = ROUND_SECONDS[r], nMatches = G.alive.length / 2;
   const a = G.alive[2 * G.match], b = G.alive[2 * G.match + 1];
   const [left, right] = G.rand() < 0.5 ? [a, b] : [b, a];
-  G.cur = { a, b, left, right, heard: { a: false, b: false }, firstPlayed: null, replays: 0, t0: Date.now() };
+  G.cur = { a, b, left, right, heard: { a: false, b: false }, firstPlayed: null, replays: 0, t0: Date.now(), decided: false };
+  renderProgress();
   $("#round-label").textContent = ROUND_NAMES[r];
   $("#match-label").textContent = nMatches > 1 ? `Match ${G.match + 1} of ${nMatches}` : "The final";
   $("#clip-label").textContent = sec === 30 ? "Full 30 s" : `${sec} s clips`;
@@ -162,6 +175,7 @@ function renderMatch() {
     $(".tid", el).textContent = G.letter(row);
     cover($(".cover", el), G.key(row), G.letter(row));
     $(".bar i", el).style.width = "0";
+    $(".heard-sr", el).textContent = "";
   }
   $$(".pick").forEach((p) => (p.disabled = true)); $("#tie").disabled = true;
   $("#hint").textContent = r === 0
@@ -169,7 +183,21 @@ function renderMatch() {
     : `Clips are longer now (${sec} s), so you'll hear where each take goes.`;
 }
 
+function renderProgress() {
+  const done = G.matches.length, el = $("#progress");
+  el.innerHTML = "";
+  [4, 2, 1].forEach((n, r) => {
+    if (r) el.insertAdjacentHTML("beforeend", '<li class="gap" aria-hidden="true"></li>');
+    for (let i = 0; i < n; i++) {
+      const k = [0, 4, 6][r] + i;
+      el.insertAdjacentHTML("beforeend", `<li class="${k < done ? "done" : k === done ? "cur" : ""}" aria-hidden="true"></li>`);
+    }
+  });
+  el.setAttribute("aria-label", `Match ${done + 1} of 7 overall`);
+}
+
 async function playSide(side) {
+  if (!G?.cur || G.cur.decided) return false;
   const m = G.cur, row = side === "a" ? m.left : m.right, sec = ROUND_SECONDS[G.round];
   const el = $(`#take-${side}`);
   m.firstPlayed ??= row;
@@ -181,7 +209,7 @@ async function playSide(side) {
     onTick: (e, d) => {
       $(".bar i", el).style.width = `${(100 * e) / d}%`;
       G.listened += Math.max(0, e - last); last = e;
-      if (e >= Math.min(3, d) && !m.heard[side] && G.cur === m) { m.heard[side] = true; el.classList.add("heard"); unlock(); }
+      if (e >= Math.min(3, d) && !m.heard[side] && G.cur === m) { m.heard[side] = true; el.classList.add("heard"); $(".heard-sr", el).textContent = " (heard)"; unlock(); }
     },
   }).catch(() => { $("#hint").textContent = "This clip failed to load. Check your connection and try again."; return false; });
   el.classList.remove("playing");
@@ -196,7 +224,8 @@ function unlock() {
 
 function choose(side) {
   const m = G.cur;
-  if (!(m.heard.a && m.heard.b)) return;
+  if (!m || m.decided || !(m.heard.a && m.heard.b)) return;   // one decision per match (key repeat, double click)
+  m.decided = true;
   audio.stop();
   const tie = side === "tie";
   if (tie) side = G.rand() < 0.5 ? "a" : "b";
@@ -233,7 +262,7 @@ function finish() {
   const p = G.prompt, champ = G.stages.at(-1)[0];
   const machineStages = playOut(G.seeding, clapRounds(p)), machine = machineStages.at(-1)[0];
   const ag = agreement(G.matches, p);
-  G.champion = champ; G.machine = machine;
+  G.champion = champ; G.machine = machine; G.active = false;
   saveGame(ag);
 
   cover($("#champ-cover"), G.key(champ), G.letter(champ));
@@ -263,6 +292,10 @@ function finish() {
       + `Early judging can cut a take that only shines later.`
     : `None of the four critics' favourite takes went out in your quarter-finals. Your 10-second ears held up.`;
 
+  const tops = Object.keys(CRITICS).filter((j) => tier(ranks(p.judges[j])[champ]) === "top").length;
+  $("#reveal-summary").innerHTML = `You and the AI picker agreed on <b>${ag.agree} of ${ag.total}</b> matches, and
+    <b>${tops} of 4</b> critics put your champion in their top two.`;
+  $("#breakdown").open = false;
   renderCritics(champ, machine);
   renderTracklist(champ, machine);
   show("reveal");
@@ -273,10 +306,9 @@ function renderCritics(champ, machine) {
   for (const [j, c] of Object.entries(CRITICS)) {
     const rk = ranks(G.prompt.judges[j]), fav = argmax(G.prompt.judges[j]);
     const d = document.createElement("article"); d.className = "critic";
-    const cls = (r) => (r <= 2 ? "good" : r >= 7 ? "bad" : "");
     d.innerHTML = `<h3>${c.name}</h3><p class="who">${c.model} (${c.year}): ${c.measures}</p>
-      <div class="rank ${cls(rk[champ])}">#${rk[champ]} <small>of 8 for your champion</small></div>
-      <p class="line">AI picker's champion: <b>#${rk[machine]}</b> · Their favourite: <b>Take ${G.letter(fav)}</b></p>`;
+      <div class="tier ${tier(rk[champ])}">${TIER_LABEL[tier(rk[champ])]}</div><p class="line">for your champion</p>
+      <p class="line">AI picker's champion: <b>${TIER_LABEL[tier(rk[machine])].toLowerCase()}</b> · Their favourite: <b>Take ${G.letter(fav)}</b></p>`;
     el.append(d);
   }
 }
@@ -297,8 +329,10 @@ function renderTracklist(champ, machine) {
     info.innerHTML = `<b>Take ${G.letter(row)}</b><div class="badges">${badges}</div>`;
     const rk = document.createElement("div"); rk.className = "ranks";
     for (const [j, c] of Object.entries(CRITICS)) {
-      const s = document.createElement("span"); s.className = `r${R[j][row] === 1 ? " top" : ""}`;
-      s.textContent = `${c.name.replace("The ", "")} #${R[j][row]}`; rk.append(s);
+      const t = tier(R[j][row]);
+      if (t === "middle") continue;
+      const s = document.createElement("span"); s.className = `r ${t}`;
+      s.textContent = `${c.name.replace("The ", "")} ${t === "top" ? "▲ top two" : "▼ bottom two"}`; rk.append(s);
     }
     t.append(btn, coverEl(G.key(row), G.letter(row), "tiny"), info, rk);
     el.append(t);
@@ -339,10 +373,22 @@ function renderHow() {
 
 // ---------- wiring ----------
 function wire() {
+  const go = (v) => { audio.stop(); if (G) G.active = false; history.replaceState(null, "", v === "how" ? "#how" : "#"); show(v); };
+  let pending = null;
+  const askLeave = (v) => { pending = v; $("#leave").showModal(); };
+  $("#leave-stay").onclick = () => $("#leave").close();
+  $("#leave-go").onclick = () => { $("#leave").close(); go(pending); };
   $$("[data-nav]").forEach((a) => a.addEventListener("click", (e) => {
-    e.preventDefault(); audio.stop();
-    const v = a.dataset.nav; history.replaceState(null, "", v === "how" ? "#how" : "#"); show(v);
+    e.preventDefault();
+    G?.active ? askLeave(a.dataset.nav) : go(a.dataset.nav);
   }));
+  window.addEventListener("popstate", () => {          // browser back during a game
+    if (G?.active) { history.pushState({ game: true }, "", "#play"); askLeave("home"); }
+    else show(location.hash === "#how" ? "how" : "home");
+  });
+  const keysOn = store.get("eight-takes-keys", true);
+  $("#keys-on").checked = keysOn; document.body.classList.toggle("no-keys", !keysOn);
+  $("#keys-on").onchange = (e) => { store.set("eight-takes-keys", e.target.checked); document.body.classList.toggle("no-keys", !e.target.checked); };
   $$(".chip").forEach((c) => c.addEventListener("click", () => {
     $$(".chip").forEach((x) => x.classList.toggle("on", x === c)); renderShelf(c.dataset.filter);
   }));
@@ -354,7 +400,7 @@ function wire() {
   $("#tie").onclick = () => choose("tie");
   $("#play-both").onclick = async () => { if (await playSide("a")) await playSide("b"); };
   $("#next-round").onclick = () => { show("game"); renderMatch(); };
-  $("#again").onclick = () => { audio.stop(); show("home"); };
+  $("#again").onclick = () => { audio.stop(); history.replaceState(null, "", "#"); show("home"); };
   $("#champ-play").onclick = () => audio.play(url(G.prompt.id, G.champion), 30,
     { title: `Take ${G.letter(G.champion)}`, sub: "Your champion · full 30 s", key: G.key(G.champion) });
   $("#np-toggle").onclick = () => { audio.stop(); nowPlaying(); };
@@ -366,7 +412,7 @@ function wire() {
     setTimeout(() => ($("#share").textContent = "Copy result"), 1800);
   };
   document.addEventListener("keydown", (e) => {
-    if ($("#game").hidden || e.metaKey || e.ctrlKey || e.altKey || e.target.closest("input, textarea")) return;
+    if ($("#game").hidden || !$("#keys-on").checked || $("#leave").open || e.metaKey || e.ctrlKey || e.altKey || e.target.closest("input, textarea")) return;
     const k = e.key.toLowerCase();
     if (k === "q") playSide("a"); else if (k === "w") playSide("b");
     else if (k === "1") choose("a"); else if (k === "2") choose("b"); else if (k === "0") choose("tie");
