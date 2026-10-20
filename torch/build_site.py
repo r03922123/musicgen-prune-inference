@@ -43,12 +43,17 @@ def headline(results):
     fr = json.loads((R / "frontier.json").read_text())
     br = json.loads((R / "bracket.json").read_text())
     pr = json.loads((R / "profile_decode_small_float16_pretrained_t4.json").read_text())
+    ag = json.loads((R / "judge_agreement.json").read_text())
     sched = {f"{s['first']}_{s['keep']}": s for s in fr["schedules"] if s["first"]}
     pick = lambda d: {k: d[k] for k in ("mean", "lo", "hi", "n")}
     out = {"schedule_10_0.5": {"source": "results/frontier.json"},
            "selection": {"source": "results/frontier.json"},
            "bracket": {"source": "results/bracket.json"},
-           "profile_b1": {"source": "results/profile_decode_small_float16_pretrained_t4.json"}}
+           "profile_b1": {"source": "results/profile_decode_small_float16_pretrained_t4.json"},
+           "agreement": {"source": "results/judge_agreement.json", "n_prompts": ag["n_prompts"]}}
+    for pair in ("clap~mulan", "clap~cmi_qual", "clap~aes_CE"):
+        a = ag["pairs"][pair]
+        out["agreement"][pair] = {"between": a["between"], "within": pick(a["within"])}
     for st in ("musiccaps", "redteam"):
         m = sched["10_0.5"]["sets"][st]
         out["schedule_10_0.5"][st] = {"compute": pick(m["compute"]), "same_winner": pick(m["same_winner"])}

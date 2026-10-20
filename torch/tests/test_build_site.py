@@ -30,6 +30,8 @@ def test_headline_copies_committed_numbers():
     assert h["schedule_10_0.5"]["musiccaps"]["same_winner"]["mean"] == s["sets"]["musiccaps"]["same_winner"]["mean"]
     assert h["schedule_10_0.5"]["musiccaps"]["same_winner"]["n"] == 40
     assert all("source" in v for v in h.values())
+    ag = json.loads((ROOT / "results/judge_agreement.json").read_text())
+    assert h["agreement"]["clap~mulan"]["within"]["mean"] == ag["pairs"]["clap~mulan"]["within"]["mean"]
 
 
 def test_gain_respects_peak_limit():

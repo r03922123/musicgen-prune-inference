@@ -17,6 +17,7 @@ const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const fmtT = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const pct = (x) => `${Math.round(x * 100)}%`;
+const sgnless = (x, d = 2) => `${x < 0 ? "−" : ""}${Math.abs(x).toFixed(d)}`;
 const sgn = (x, d = 2) => `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(d)}`;
 
 let DATA, G = null;           // G = current game
@@ -314,26 +315,26 @@ function saveGame(ag) {
 
 // ---------- how it works ----------
 function renderHow() {
-  const h = DATA.headline, s = h["schedule_10_0.5"], b = h.bracket, sel = h.selection, pr = h.profile_b1;
+  const h = DATA.headline, s = h["schedule_10_0.5"], b = h.bracket, sel = h.selection;
   const ci = (m, f = pct) => `${f(m.lo)}–${f(m.hi)}`;
+  const FMT = { pct, int: (x) => String(Math.round(x)), f1: (x) => x.toFixed(1), f2: (x) => sgnless(x, 2) };
+  $$("[data-num]").forEach((el) => {
+    const v = el.dataset.num.split("/").reduce((o, k) => o?.[k], h);
+    el.textContent = typeof v === "number" ? FMT[el.dataset.fmt ?? "f2"](v) : "?";
+  });
   const items = [
     [`${pct(s.musiccaps.compute.mean)} of the compute`,
      `Cutting at 10 s and 20 s (8 → 4 → 2) generates ${pct(s.musiccaps.compute.mean)} of the audio, and CLAP still keeps the take it would pick from all eight full songs on ${pct(s.musiccaps.same_winner.mean)} of MusicCaps prompts (95% CI ${ci(s.musiccaps.same_winner)}, n = ${s.musiccaps.same_winner.n}) and ${pct(s.redteam.same_winner.mean)} of slow-build prompts (n = ${s.redteam.same_winner.n}).`,
      s.source],
     [`${pct(b.musiccaps.same_as_unpruned.mean)} survive the draw`,
-     `With a random knockout draw like yours (all 315 possible draws per prompt), the AI picker's full-length favourite becomes champion ${pct(b.musiccaps.same_as_unpruned.mean)} of the time (95% CI ${ci(b.musiccaps.same_as_unpruned)}, n = ${b.musiccaps.same_as_unpruned.n}). A bad draw can pair the two best takes in round 1.`,
+     `With a random knockout draw like yours (all 315 possible draws per prompt), the AI picker's full-length favourite becomes champion ${pct(b.musiccaps.same_as_unpruned.mean)} of the time (95% CI ${ci(b.musiccaps.same_as_unpruned)}, n = ${b.musiccaps.same_as_unpruned.n}), against ${pct(s.musiccaps.same_winner.mean)} for top-half pruning at the same checkpoints.`,
      b.source],
     ["Is the picker's favourite better?",
-     `Barely. Versus a random take, CLAP's pick scores ${sgn(sel.cmi_qual.gain_vs_random.mean)} on CMI-RM quality (95% CI ${sgn(sel.cmi_qual.gain_vs_random.lo)} to ${sgn(sel.cmi_qual.gain_vs_random.hi)}) and ${sgn(sel.mulan.gain_vs_random.mean, 3)} on MuQ-MuLan (CI ${sgn(sel.mulan.gain_vs_random.lo, 3)} to ${sgn(sel.mulan.gain_vs_random.hi, 3)}), n = ${sel.mulan.gain_vs_random.n}. Keeping the same winner cheaply doesn't make the winner good; that's why your ears matter.`,
+     `Barely. Versus a random take, CLAP's pick scores ${sgn(sel.cmi_qual.gain_vs_random.mean)} on CMI-RM quality (95% CI ${sgn(sel.cmi_qual.gain_vs_random.lo)} to ${sgn(sel.cmi_qual.gain_vs_random.hi)}), against a best possible ${sgn(sel.cmi_qual.oracle_gain.mean)}, and ${sgn(sel.mulan.gain_vs_random.mean, 3)} on MuQ-MuLan (CI ${sgn(sel.mulan.gain_vs_random.lo, 3)} to ${sgn(sel.mulan.gain_vs_random.hi, 3)}); n = ${sel.mulan.gain_vs_random.n}. Keeping the same winner cheaply doesn't make the winner good.`,
      sel.source],
-    [`${pct(pr.gpu_share_of_wall)} GPU busy`,
-     `On a T4 GPU one generation step takes ${pr.wall_ms_per_step.toFixed(1)} ms, but the GPU works for only ${pr.gpu_busy_ms_per_step.toFixed(1)} ms of it: about ${Math.round(pr.kernels_per_step)} tiny GPU jobs per step, each waiting on the CPU. So cutting takes saves less time than compute until that overhead is removed.`,
-     pr.source],
   ];
   $("#findings").innerHTML = items.map(([t, body, src]) =>
-    `<div class="finding"><b>${t}</b><p>${body}</p><span class="src">Source: ${src}</span></div>`).join("");
-  $("#critic-list").innerHTML = Object.values(CRITICS)
-    .map((c) => `<li><b>${c.name}</b>: ${c.model} (${c.year}), ${c.measures}.</li>`).join("");
+    `<div class="finding"><b>${t}</b><p>${body}</p><span class="src">Measured · source: ${src}</span></div>`).join("");
 }
 
 // ---------- wiring ----------

@@ -194,3 +194,37 @@ footer { max-width: 1100px; margin: 40px auto 0; padding: 0 16px 20px; color: va
   .track .ranks { grid-column: 1 / -1; justify-content: flex-start; }
   .champion { gap: 16px; }
 }
+
+/* technical post */
+.post { max-width: 760px; padding: 24px 0 8px; }
+.post-head h1 { margin-bottom: .25em; }
+.dek { font-size: 1.2rem; color: var(--muted); margin: 0 0 .8em; }
+.byline { font-size: .85rem; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 18px; }
+.post h2 { margin-top: 2em; scroll-margin-top: 16px; }
+.post p, .post li { line-height: 1.7; }
+.tldr { background: var(--panel); border-left: 4px solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0; padding: 14px 20px; margin: 22px 0; }
+.tldr h2 { margin: 0 0 .3em; font-size: 1rem; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); }
+.tldr ul { margin: 0; padding-left: 1.1em; }
+.toc { background: var(--panel); border-radius: var(--radius); padding: 14px 20px; margin: 0 0 8px; }
+.toc ol { margin: .4em 0 0; padding-left: 1.3em; columns: 2; column-gap: 28px; }
+.toc a { color: var(--text); text-decoration: none; }
+.toc a:hover { color: var(--accent); }
+.qpair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+.qpair > div { background: var(--panel); border-radius: var(--radius); padding: 14px 16px; }
+.qpair b { color: var(--accent); }
+.qpair p { margin: .3em 0 0; }
+.era { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; position: relative; }
+.era-col { background: var(--panel); border-radius: var(--radius); padding: 14px 16px; border-top: 3px solid var(--line); }
+.era-col:nth-child(2) { border-top-color: var(--accent); }
+.era-col h3 { font-size: 1.05rem; }
+.era-col p { font-size: .92rem; line-height: 1.6; margin: .4em 0 0; }
+.era-tag { font-size: .72rem !important; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin: 0 0 .4em !important; font-weight: 700; }
+blockquote { margin: 20px 0; padding: 4px 20px; border-left: 4px solid var(--accent); font-size: 1.15rem; color: var(--text); }
+.apps { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 14px 0; }
+.apps > div { background: var(--panel); border-radius: var(--radius); padding: 14px 16px; }
+.apps h3 { font-size: 1rem; color: var(--accent); }
+.apps p { font-size: .92rem; line-height: 1.6; margin: .3em 0 0; }
+@media (max-width: 760px) {
+  .era, .apps, .qpair { grid-template-columns: 1fr; }
+  .toc ol { columns: 1; }
+}

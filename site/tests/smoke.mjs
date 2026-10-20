@@ -37,6 +37,8 @@ for (const [name, viewport] of [["desktop", { width: 1280, height: 860 }], ["mob
   await page.screenshot({ path: `${shots}/reveal-${name}.png`, fullPage: true });
   await page.click('[data-nav="how"]');
   await page.waitForTimeout(400);
+  const unfilled = await page.$$eval("[data-num]", (els) => els.filter((e) => !e.textContent || e.textContent === "?").length);
+  if (unfilled) throw new Error(`${unfilled} article numbers not filled from data.json`);
   await page.screenshot({ path: `${shots}/how-${name}.png`, fullPage: true });
   const games = await page.evaluate(() => JSON.parse(localStorage.getItem("eight-takes-games")));
   if (games.length !== 1 || games[0].matches.length !== 7) throw new Error("game log not saved");
