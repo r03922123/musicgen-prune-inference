@@ -115,3 +115,19 @@ Kaggle queued the job 18:01-19:41; it ran 19:41-19:44 after the self-check passe
 1.0). Batch 1: wall 18.7 ms/step, GPU busy 6.5 ms (35 %), ~498 kernels/step at 13 us mean;
 batch 8: 22.2 / 8.6 ms (39 %). The launch-overhead hypothesis is confirmed; CUDA graphs stay
 deferred (not implemented, per instruction). results/profile_decode_small_float16_pretrained_t4.json.
+
+## 2026-10-20: Eight Takes listening game (Jie's call: a public game, deployed tonight)
+
+- Format: single-elimination bracket over a prompt's 8 takes; rounds on 10 s, 20 s, 30 s clips
+  (8 -> 4 -> 2 -> 1) = the 10 s / keep-0.5 schedule with a human pruner. Each round restarts
+  from 0 s (Jie's choice: fairer comparison; costs 220 s of listening vs 140 s continuing).
+- CLAP is the opponent ("AI picker"), never a referee; the four Q2 judges are the critics in
+  the reveal. Same rule as the study: the pruner is never the judge.
+- Both takes must be heard for >= 3 s before a choice; "can't decide" = coin flip, logged as a tie.
+- Audio: one linear gain per take to -16 LUFS, peak <= -1 dBFS, boost capped at +15 dB
+  (one near-silent take, mc_eStzDzEopDI row 0, would otherwise get +27.7 dB of noise).
+- Data: game logs stay in the player's browser (localStorage). No analytics, no backend.
+- Research add-on: results/bracket.json (all 315 brackets per prompt, CLAP as player): champion
+  = unpruned CLAP pick 0.81 [0.72, 0.88] (MusicCaps n = 40), top-k at the same checkpoints 0.875.
+- Repo made public (Jie's choice) so GitHub Pages can serve the site; history scanned for
+  secrets first (none found).

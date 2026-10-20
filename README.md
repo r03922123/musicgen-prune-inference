@@ -21,6 +21,21 @@ whose value over a random pick is, at best, small on these 40 prompts.
 Details, sample sizes and limitations below. Every number traces to a committed file under
 `results/` or `torch/`, and each is labelled *measured*, *derived* or *hypothesis*.
 
+## Play it: Eight Takes
+
+**[r03922123.github.io/musicgen-prune-mlx](https://r03922123.github.io/musicgen-prune-mlx/)** is a
+listening game built on the same corpus (source in `site/`). You knock out a prompt's 8 takes
+in a bracket: quarter-finals on 10 s clips, semi-finals on 20 s, the final on the full 30 s.
+That is the 10 s / keep-0.5 schedule with you as the pruner. CLAP plays the same draw as the
+"AI picker", and the four Q2 judges are shown as critics in the reveal. Nothing is generated
+live; clips are cut from the saved takes, loudness-matched with one linear gain per take.
+
+How much the random draw costs (*measured*, `results/bracket.json`, all 315 brackets per
+prompt, CLAP as the player): the bracket champion equals the unpruned CLAP pick on
+0.81 [0.72, 0.88] of MusicCaps prompts (n = 40) and 0.76 [0.61, 0.90] of red-team prompts
+(n = 10), versus 0.875 and 0.80 for top-k pruning at the same checkpoints. Judge regret is
+indistinguishable from zero under all four Q2 judges.
+
 ## Why this exists
 
 This is a personal, post-employment rebuild of a pruning prototype I built at KKCompany
@@ -228,6 +243,9 @@ uv run pytest torch/tests -q                        # PyTorch port: self-check, 
 uv run python torch/frontier.py                     # Q1/Q2 tables + figure from data/corpus
 uv run python torch/agreement.py                    # exploratory judge agreement
 uv run python torch/listen.py                       # blind A/B test (needs data/wavs/, see below)
+uv run python torch/bracket.py                      # the game's bracket vs top-k, all 315 draws
+uv run python torch/build_site.py                   # site/data.json + site/audio/*.mp3 (needs ffmpeg)
+node --test site/tests                              # JS game logic == results/bracket.json
 ```
 
 GPU jobs run on Kaggle (one file per kernel; sources are embedded by `kaggle_job/bundle.py`):
@@ -249,6 +267,8 @@ and untar into `data/wavs/`.
 | `torch/evaluate.py`, `torch/frontier.py` | schedule simulation, Q1/Q2 metrics, bootstrap, figure |
 | `torch/listen.py` | blind A/B listening test |
 | `torch/profile_decode.py` | torch.profiler breakdown of decode steps |
+| `torch/bracket.py`, `torch/build_site.py` | bracket simulation; game data and audio export |
+| `site/` | Eight Takes listening game (static; deployed from the `gh-pages` branch) |
 | `vendor/` | unmodified MusicGen / EnCodec / T5 from ml-explore/mlx-examples (MIT) |
 
 ## Limitations
