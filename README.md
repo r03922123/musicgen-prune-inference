@@ -1,4 +1,4 @@
-# musicgen-prune-mlx
+# musicgen-prune-inference
 
 Cheaper best-of-N music generation: MusicGen best-of-8 with **checkpoint pruning**, measured
 offline on a fixed corpus, in MLX (M1 MacBook Air) and PyTorch + HF transformers (Kaggle T4).
@@ -23,7 +23,7 @@ Details, sample sizes and limitations below. Every number traces to a committed 
 
 ## Play it: Eight Takes
 
-**[r03922123.github.io/musicgen-prune-mlx](https://r03922123.github.io/musicgen-prune-mlx/)** is a
+**[r03922123.github.io/musicgen-prune-inference](https://r03922123.github.io/musicgen-prune-inference/)** is a
 listening game built on the same corpus (source in `site/`). You knock out a prompt's 8 takes
 in a bracket: quarter-finals on 10 s clips, semi-finals on 20 s, the final on the full 30 s.
 That is the 10 s / keep-0.5 schedule with you as the pruner. CLAP plays the same draw as the
