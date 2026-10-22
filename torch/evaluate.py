@@ -73,6 +73,26 @@ def selection_metrics(final, judge):
             "spearman": rho}
 
 
+def future_metrics(early, final, chunks, cps, keep_frac, horizon=30, unheard_from=20):
+    """C1 future-only check (tasks/decisions.md, 2026-10-23): does pruning on early CLAP keep the
+    take that CLAP likes best on audio no checkpoint has heard?
+    chunks: (n, 3) CLAP cosine of each 10 s chunk. Target = best last chunk (20-30 s), testable only
+    if pruning's last checkpoint is <= unheard_from s. The final 30 s pick hears that chunk, so only
+    the surviving set is scored.
+      kept       1 if the target survives;  chance  k / n for k survivors;  excess  kept - chance
+      cut_first  1 if the target is cut at the first checkpoint"""
+    r = simulate(early, final, cps, keep_frac, horizon)
+    if r["alive"] and max(r["alive"]) > unheard_from:
+        return {"testable": False}
+    last = np.asarray(chunks, dtype=float)[:, -1]
+    target = int(np.argmax(last))                                # argmax keeps the first on ties
+    kept = float(target in r["survivors"])
+    chance = len(r["survivors"]) / len(final)
+    first = r["alive"].get(cps[0], r["survivors"]) if cps else r["survivors"]
+    return {"testable": True, "target": target, "kept": kept, "chance": chance,
+            "excess": kept - chance, "cut_first": float(target not in first)}
+
+
 def all_brackets(rows):
     """Every distinct single-elimination bracket over rows (an int n means range(n), n a power
     of 2), as seedings: adjacent pairs meet in round 1, adjacent winners in round 2, ...

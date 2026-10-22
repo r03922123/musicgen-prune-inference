@@ -28,8 +28,8 @@ class Clap:
     def _feat(out):  # transformers 5 may return a ModelOutput instead of a tensor
         return out if hasattr(out, "norm") else out.pooler_output
 
-    @torch.inference_mode()
-    def __call__(self, wavs, prompt):
+    def _embed(self, wavs, prompt):
+        """Unit text embedding (1, D), unit 10 s chunk embeddings (C, D), owning clip of each chunk."""
         from scipy.signal import resample_poly
         t = self._feat(self.model.get_text_features(**self.proc.tokenizer([prompt], return_tensors="pt").to(self.dev)))
         t = t / t.norm(dim=-1, keepdim=True)
@@ -41,10 +41,20 @@ class Clap:
                 chunks.append(w[s : s + W]); owner.append(b)
         x = self.proc.feature_extractor(chunks, sampling_rate=48000, return_tensors="pt").to(self.dev)
         a = self._feat(self.model.get_audio_features(**x))
-        a = a / a.norm(dim=-1, keepdim=True)
-        owner = torch.tensor(owner, device=self.dev)
+        return t, a / a.norm(dim=-1, keepdim=True), torch.tensor(owner, device=self.dev)
+
+    @torch.inference_mode()
+    def __call__(self, wavs, prompt):
+        t, a, owner = self._embed(wavs, prompt)
         clip = torch.stack([a[owner == b].mean(0) for b in range(len(wavs))])
         return {"clap": ((clip / clip.norm(dim=-1, keepdim=True)) @ t.T)[:, 0].float().cpu().numpy()}
+
+    @torch.inference_mode()
+    def chunks(self, wavs, prompt):
+        """Cosine of each 10 s chunk on its own (no averaging): list per clip, in time order."""
+        t, a, owner = self._embed(wavs, prompt)
+        cos = (a @ t.T)[:, 0].float().cpu().numpy()
+        return [cos[(owner == b).cpu().numpy()].tolist() for b in range(len(wavs))]
 
 
 class Audiobox:

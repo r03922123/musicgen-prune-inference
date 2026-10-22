@@ -153,3 +153,35 @@ def test_toy_bracket_metrics():
     assert m["same_as_topk"] == pytest.approx(2 / 3)
     assert m["regret"] == pytest.approx(2 / 3)
     assert m["topk_regret"] == pytest.approx(1.0)
+
+
+# C1 future-only check (tasks/decisions.md, 2026-10-23). Toy, 4 takes, early CLAP identical at
+# 10 s and 20 s: [.4, .3, .2, .1]; chunk-3 (20-30 s) cosines [.1, .2, .9, .3] -> F = take 2.
+#   keep 0.5 , cps [10, 20]: alive {10: [0, 1], 20: [0]} -> F cut at 10 s; k = 1, chance 1/4
+#   keep 0.75, cps [10, 20]: alive {10: [0, 1, 2], 20: [0, 1, 2]} -> F kept; k = 3, chance 3/4
+FE = {10: [.4, .3, .2, .1], 20: [.4, .3, .2, .1]}
+CH = [[.4, .3, .1], [.3, .3, .2], [.2, .3, .9], [.1, .3, .3]]
+
+
+def test_future_metrics_cut_and_kept():
+    from evaluate import future_metrics
+    m = future_metrics(FE, [0, 0, 0, 0], CH, [10, 20], 0.5)
+    assert m["testable"] and m["target"] == 2 and m["kept"] == 0.0
+    assert m["chance"] == pytest.approx(1 / 4) and m["excess"] == pytest.approx(-1 / 4) and m["cut_first"] == 1.0
+    m = future_metrics(FE, [0, 0, 0, 0], CH, [10, 20], 0.75)
+    assert m["kept"] == 1.0 and m["chance"] == pytest.approx(3 / 4) and m["excess"] == pytest.approx(1 / 4)
+    assert m["cut_first"] == 0.0
+
+
+def test_future_metrics_not_testable_once_a_checkpoint_hears_chunk_3():
+    from evaluate import future_metrics
+    s = [.4, .3, .2, .1]
+    m = future_metrics({t: s for t in (5, 10, 15, 20, 25)}, [0, 0, 0, 0], CH, [5, 10, 15, 20, 25], 0.75)
+    assert m == {"testable": False}
+
+
+def test_future_metrics_testable_when_pruning_stops_early():
+    from evaluate import future_metrics
+    s = [.4, .3, .2, .1]               # keep 0.5 reaches one survivor at 10 s, never checks 15-25 s
+    m = future_metrics({t: s for t in (5, 10, 15, 20, 25)}, [0, 0, 0, 0], CH, [5, 10, 15, 20, 25], 0.5)
+    assert m["testable"] and m["kept"] == 0.0 and m["chance"] == pytest.approx(1 / 4)

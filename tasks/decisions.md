@@ -157,3 +157,9 @@ that, against a target no checkpoint has heard.
 - Exploratory: share of prompts where F is cut at the first (10 s) checkpoint.
 - This is early CLAP vs late CLAP (fidelity of the pruner to itself over time), not quality; the
   pruner-is-never-the-judge rule still applies to quality claims.
+
+Outcome (computed after the entry above was committed in 9cae3fa; results/future_only.json):
+hypothesis supported on MusicCaps (n = 40), every testable schedule keeps the 20-30 s favourite
+above chance, e.g. 10 s / 0.65: 0.88 vs 0.50, excess +0.38 [+0.28, +0.47]. Red-team (n = 10):
+same direction, all CIs reach 0 or below. 5 s / 0.65 and 5 s / 0.75 not testable as pre-specified.
+Exploratory reference: clap10 vs chunk-1 within-prompt Spearman +0.99, confirming the overlap.

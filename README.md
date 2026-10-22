@@ -13,7 +13,9 @@ in Hyperband). This repo asks two separate questions:
   candidate when an independent judge grades it?
 
 **Short answer, on 50 prompts.** Q1: a 10 s / keep-0.65 schedule uses 75 % of the compute and keeps
-the unpruned pick on 97 % of 40 MusicCaps prompts. Q2 depends on the judge, and the gains are
+the unpruned pick on 97 % of 40 MusicCaps prompts. That is fidelity to CLAP's own 30 s pick, which
+shares the first 10 s with the checkpoint score. Against a target no checkpoint has heard (CLAP's
+favourite on the last 10 s), the same schedule keeps it on 88 % of prompts versus 50 % by chance. Q2 depends on the judge, and the gains are
 small. The 2026 reward model CMI-RM scores CLAP's pick a little above a random candidate
 (+0.16, 95 % CI [+0.01, +0.30], about a quarter of the best possible gain). MuQ-MuLan sees no
 gain, and Audiobox content-enjoyment is inconclusive. So pruning cheaply preserves a choice
@@ -99,6 +101,39 @@ keeping `ceil(alive x keep)` each time.
 This threshold was chosen *after* seeing the Day 1 results, so it is not pre-registered.
 It replaced a Day 1 rule ("regret CI touches 0") that rewarded wide intervals and picked
 5 s / 0.5, which keeps the unpruned pick on only 62 % of prompts.
+
+**What the 97 % does and does not show.** CLAP sees at most 10 s, so a 30 s score is the cosine of
+the re-normalised mean of three 10 s chunk embeddings (`torch/scorers.py`), and the 10 s checkpoint
+score is essentially the first of them (within-prompt Spearman +0.99 with the chunk-1 score,
+`results/future_only.json`). Same-winner is therefore *operational fidelity to CLAP best-of-8*, a
+valid claim about a system that selects with CLAP. It is not evidence that early audio predicts
+later audio, which the next check measures.
+
+### Does early audio predict later audio? (future-only check)
+
+Pre-registered before computing (`tasks/decisions.md`, 2026-10-23). Every take's three 10 s chunks
+were scored with the same CLAP setup (`results/clap_chunks.json`; recomputed 30 s scores match the
+corpus within 0.018). Target = the take CLAP likes best on the **last 10 s (20-30 s)**, which no
+checkpoint of a testable schedule has heard. Kept = the target survives pruning; chance = k/8 for k
+survivors. Source: `results/future_only.json` (*measured*). Schedules whose last checkpoint is
+after 20 s (5 s / 0.65 and 5 s / 0.75) have heard the target chunk and are not testable.
+
+| schedule | MusicCaps n=40: kept vs chance | excess [95 % CI] | red-team n=10: kept vs chance | excess [95 % CI] |
+|---|---|---|---|---|
+| 5 s / 0.5 | 0.45 vs 0.12 | +0.33 [+0.17, +0.47] | 0.20 vs 0.12 | +0.07 [-0.12, +0.38] |
+| 10 s / 0.5 | 0.72 vs 0.25 | +0.47 [+0.33, +0.60] | 0.50 vs 0.25 | +0.25 [-0.05, +0.55] |
+| **10 s / 0.65** | **0.88 vs 0.50** | **+0.38 [+0.28, +0.47]** | **0.80 vs 0.50** | **+0.30 [+0.00, +0.50]** |
+| 10 s / 0.75 | 0.93 vs 0.62 | +0.30 [+0.20, +0.38] | 0.80 vs 0.62 | +0.17 [-0.12, +0.38] |
+
+Within-prompt Spearman, early CLAP vs chunks it has not heard: the 10 s score vs the mean of the
+10-30 s chunks is +0.44 [+0.34, +0.53] on MusicCaps and +0.25 [-0.01, +0.48] on red-team; the 20 s
+score vs the 20-30 s chunk is +0.52 [+0.43, +0.61] and +0.40 [+0.16, +0.63].
+
+So on MusicCaps the first 10 s carry real information about how CLAP will rate the end of the
+take: every testable schedule keeps the late favourite well above chance. On slow-build prompts
+the signal is weaker and every CI reaches 0 or below at n = 10. The 10 s / 0.65 schedule
+still cuts the late favourite at its first checkpoint on 5 % of MusicCaps and 10 % of red-team
+prompts. This is early CLAP against late CLAP, not quality: the Q2 judges are unchanged.
 
 Red-team prompts (music that starts quiet and builds) are where aggressive schedules break.
 At 5 s / 0.5 only 3 of 10 keep the unpruned pick, versus 62 % on MusicCaps. A 5 s first
@@ -243,6 +278,8 @@ uv run pytest torch/tests -q                        # PyTorch port: self-check, 
 uv run python torch/frontier.py                     # Q1/Q2 tables + figure from data/corpus
 uv run python torch/agreement.py                    # exploratory judge agreement
 uv run python torch/listen.py                       # blind A/B test (needs data/wavs/, see below)
+uv run python torch/clap_chunks.py                  # CLAP per 10 s chunk of every take (CPU, ~25 min)
+uv run python torch/future.py                       # future-only check of early CLAP
 uv run python torch/bracket.py                      # the game's bracket vs top-k, all 315 draws
 uv run python torch/build_site.py                   # site/data.json + site/audio/*.mp3 (needs ffmpeg)
 node --test site/tests/*.test.mjs                    # JS game logic == results/bracket.json
@@ -292,6 +329,10 @@ and untar into `data/wavs/`.
   reported. The one MusicCaps CI that excludes 0 (CMI-RM quality) does not survive a Bonferroni
   correction for four readings: at the adjusted 98.75 % level it is [-0.029, +0.340]
   (`results/frontier.json`, `gain_vs_random_bonferroni`).
+- **Q1 same-winner shares audio with its target.** The 30 s CLAP score includes the first 10 s
+  chunk the checkpoint already scored, so same-winner is fidelity to CLAP best-of-8, not prediction.
+  The future-only check above removes that overlap for schedules that stop pruning by 20 s; chunk
+  scores come from the final decode rather than decoded prefixes (difference <= 0.018 on 30 s scores).
 - **The Q1 threshold (same-winner >= 0.90) was set after seeing results.** The Day 1 rule it
   replaced is kept in `tasks/decisions.md` with its outcome.
 - **False-kill** is only comparable between schedules with the same final survivor count

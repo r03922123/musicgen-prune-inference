@@ -1,0 +1,344 @@
+{
+ "target": "best CLAP cosine on the 20-30 s chunk",
+ "n": {
+  "musiccaps": 40,
+  "redteam": 10
+ },
+ "schedules": [
+  {
+   "first": 5,
+   "keep": 0.5,
+   "checkpoints": [
+    5,
+    10,
+    15,
+    20,
+    25
+   ],
+   "sets": {
+    "musiccaps": {
+     "kept": {
+      "mean": 0.45,
+      "lo": 0.3,
+      "hi": 0.6,
+      "n": 40
+     },
+     "chance": {
+      "mean": 0.125,
+      "lo": 0.125,
+      "hi": 0.125,
+      "n": 40
+     },
+     "excess": {
+      "mean": 0.325,
+      "lo": 0.175,
+      "hi": 0.475,
+      "n": 40
+     },
+     "cut_first": {
+      "mean": 0.25,
+      "lo": 0.125,
+      "hi": 0.375,
+      "n": 40
+     }
+    },
+    "redteam": {
+     "kept": {
+      "mean": 0.2,
+      "lo": 0.0,
+      "hi": 0.5,
+      "n": 10
+     },
+     "chance": {
+      "mean": 0.125,
+      "lo": 0.125,
+      "hi": 0.125,
+      "n": 10
+     },
+     "excess": {
+      "mean": 0.075,
+      "lo": -0.125,
+      "hi": 0.375,
+      "n": 10
+     },
+     "cut_first": {
+      "mean": 0.4,
+      "lo": 0.1,
+      "hi": 0.7,
+      "n": 10
+     }
+    }
+   }
+  },
+  {
+   "first": 5,
+   "keep": 0.65,
+   "checkpoints": [
+    5,
+    10,
+    15,
+    20,
+    25
+   ],
+   "sets": {
+    "musiccaps": "not testable: a checkpoint after 20 s hears the target chunk",
+    "redteam": "not testable: a checkpoint after 20 s hears the target chunk"
+   }
+  },
+  {
+   "first": 5,
+   "keep": 0.75,
+   "checkpoints": [
+    5,
+    10,
+    15,
+    20,
+    25
+   ],
+   "sets": {
+    "musiccaps": "not testable: a checkpoint after 20 s hears the target chunk",
+    "redteam": "not testable: a checkpoint after 20 s hears the target chunk"
+   }
+  },
+  {
+   "first": 10,
+   "keep": 0.5,
+   "checkpoints": [
+    10,
+    20
+   ],
+   "sets": {
+    "musiccaps": {
+     "kept": {
+      "mean": 0.725,
+      "lo": 0.575,
+      "hi": 0.85,
+      "n": 40
+     },
+     "chance": {
+      "mean": 0.25,
+      "lo": 0.25,
+      "hi": 0.25,
+      "n": 40
+     },
+     "excess": {
+      "mean": 0.475,
+      "lo": 0.325,
+      "hi": 0.6,
+      "n": 40
+     },
+     "cut_first": {
+      "mean": 0.2,
+      "lo": 0.075,
+      "hi": 0.325,
+      "n": 40
+     }
+    },
+    "redteam": {
+     "kept": {
+      "mean": 0.5,
+      "lo": 0.2,
+      "hi": 0.8,
+      "n": 10
+     },
+     "chance": {
+      "mean": 0.25,
+      "lo": 0.25,
+      "hi": 0.25,
+      "n": 10
+     },
+     "excess": {
+      "mean": 0.25,
+      "lo": -0.05,
+      "hi": 0.55,
+      "n": 10
+     },
+     "cut_first": {
+      "mean": 0.2,
+      "lo": 0.0,
+      "hi": 0.5,
+      "n": 10
+     }
+    }
+   }
+  },
+  {
+   "first": 10,
+   "keep": 0.65,
+   "checkpoints": [
+    10,
+    20
+   ],
+   "sets": {
+    "musiccaps": {
+     "kept": {
+      "mean": 0.875,
+      "lo": 0.775,
+      "hi": 0.975,
+      "n": 40
+     },
+     "chance": {
+      "mean": 0.5,
+      "lo": 0.5,
+      "hi": 0.5,
+      "n": 40
+     },
+     "excess": {
+      "mean": 0.375,
+      "lo": 0.275,
+      "hi": 0.475,
+      "n": 40
+     },
+     "cut_first": {
+      "mean": 0.05,
+      "lo": 0.0,
+      "hi": 0.125,
+      "n": 40
+     }
+    },
+    "redteam": {
+     "kept": {
+      "mean": 0.8,
+      "lo": 0.5,
+      "hi": 1.0,
+      "n": 10
+     },
+     "chance": {
+      "mean": 0.5,
+      "lo": 0.5,
+      "hi": 0.5,
+      "n": 10
+     },
+     "excess": {
+      "mean": 0.3,
+      "lo": 0.0,
+      "hi": 0.5,
+      "n": 10
+     },
+     "cut_first": {
+      "mean": 0.1,
+      "lo": 0.0,
+      "hi": 0.3,
+      "n": 10
+     }
+    }
+   }
+  },
+  {
+   "first": 10,
+   "keep": 0.75,
+   "checkpoints": [
+    10,
+    20
+   ],
+   "sets": {
+    "musiccaps": {
+     "kept": {
+      "mean": 0.925,
+      "lo": 0.825,
+      "hi": 1.0,
+      "n": 40
+     },
+     "chance": {
+      "mean": 0.625,
+      "lo": 0.625,
+      "hi": 0.625,
+      "n": 40
+     },
+     "excess": {
+      "mean": 0.3,
+      "lo": 0.2,
+      "hi": 0.375,
+      "n": 40
+     },
+     "cut_first": {
+      "mean": 0.05,
+      "lo": 0.0,
+      "hi": 0.125,
+      "n": 40
+     }
+    },
+    "redteam": {
+     "kept": {
+      "mean": 0.8,
+      "lo": 0.5,
+      "hi": 1.0,
+      "n": 10
+     },
+     "chance": {
+      "mean": 0.625,
+      "lo": 0.625,
+      "hi": 0.625,
+      "n": 10
+     },
+     "excess": {
+      "mean": 0.175,
+      "lo": -0.125,
+      "hi": 0.375,
+      "n": 10
+     },
+     "cut_first": {
+      "mean": 0.1,
+      "lo": 0.0,
+      "hi": 0.3,
+      "n": 10
+     }
+    }
+   }
+  }
+ ],
+ "predictability": {
+  "musiccaps": {
+   "clap10_vs_chunks23": {
+    "mean": 0.4398809523809525,
+    "lo": 0.3446428571428572,
+    "hi": 0.5315476190476192,
+    "n": 40
+   },
+   "clap20_vs_chunk3": {
+    "mean": 0.5208333333333334,
+    "lo": 0.4333333333333334,
+    "hi": 0.6053571428571429,
+    "n": 40
+   },
+   "clap10_vs_chunk1": {
+    "mean": 0.9898809523809524,
+    "lo": 0.9839285714285715,
+    "hi": 0.9946428571428573,
+    "n": 40
+   },
+   "clap30_vs_chunk3": {
+    "mean": 0.7482142857142857,
+    "lo": 0.6910714285714287,
+    "hi": 0.8017857142857142,
+    "n": 40
+   }
+  },
+  "redteam": {
+   "clap10_vs_chunks23": {
+    "mean": 0.24761904761904763,
+    "lo": -0.011964285714285691,
+    "hi": 0.480952380952381,
+    "n": 10
+   },
+   "clap20_vs_chunk3": {
+    "mean": 0.39761904761904765,
+    "lo": 0.15946428571428578,
+    "hi": 0.6285714285714287,
+    "n": 10
+   },
+   "clap10_vs_chunk1": {
+    "mean": 0.9952380952380953,
+    "lo": 0.9880952380952381,
+    "hi": 1.0,
+    "n": 10
+   },
+   "clap30_vs_chunk3": {
+    "mean": 0.7261904761904765,
+    "lo": 0.6238095238095239,
+    "hi": 0.811904761904762,
+    "n": 10
+   }
+  }
+ }
+}
