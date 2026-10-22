@@ -131,3 +131,29 @@ deferred (not implemented, per instruction). results/profile_decode_small_float1
   = unpruned CLAP pick 0.81 [0.72, 0.88] (MusicCaps n = 40), top-k at the same checkpoints 0.875.
 - Repo made public (Jie's choice) so GitHub Pages can serve the site; history scanned for
   secrets first (none found).
+
+## 2026-10-23: C1, future-only check of early CLAP (recorded BEFORE computing)
+
+Red-team finding C1: the 30 s CLAP score is the cosine of the re-normalised mean of the three
+10 s chunk embeddings (torch/scorers.py:36-47), and the 10 s prefix score is essentially chunk 1
+(one prompt: |clap[10] - chunk-1 cosine| <= 0.017). So Q1 same-winner shares chunk 1 between the
+early score and the target. Q1 stays valid as *operational fidelity to CLAP best-of-8* and is
+relabelled as such; it is not evidence that early audio predicts later audio. This check measures
+that, against a target no checkpoint has heard.
+
+- Data: CLAP cosine of each final WAV's three 10 s chunks (0-10, 10-20, 20-30 s), same model and
+  preprocessing as the corpus (48 kHz, L2-normalised chunk and text embeddings), all 400 takes ->
+  results/clap_chunks.json. Caveat: chunks are cut from the final decode, not decoded prefixes.
+- Testable schedules: those whose last pruning checkpoint is <= 20 s (decided by simulate(), not
+  hard-coded), so chunk 3 (20-30 s) is unheard. Others are reported as "not testable".
+- Target F = the take with the best chunk-3 cosine. The final pick at 30 s hears chunk 3, so it is
+  excluded; only the surviving set is scored.
+- Primary metric, per testable schedule: kept = 1 if F survives pruning; compared with chance k/8
+  (k = final survivors), as the paired difference kept - k/8 with a 95 % bootstrap CI over prompts
+  (10,000 resamples, seed 0). MusicCaps (n = 40) and red-team (n = 10) separately.
+- Hypothesis: early CLAP carries information about later audio -> kept - k/8 > 0.
+- Predictability (secondary): within-prompt Spearman of clap[10] vs mean chunk-2/3 cosine and of
+  clap[20] vs chunk-3 cosine, bootstrap CI over prompts.
+- Exploratory: share of prompts where F is cut at the first (10 s) checkpoint.
+- This is early CLAP vs late CLAP (fidelity of the pruner to itself over time), not quality; the
+  pruner-is-never-the-judge rule still applies to quality claims.
