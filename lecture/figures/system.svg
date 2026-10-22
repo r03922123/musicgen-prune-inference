@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 380" width="800" height="380" font-family="Helvetica, Arial, sans-serif" font-size="12">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker>
+  </defs>
+  <rect width="800" height="380" fill="#fff"/>
+  <g stroke="#555" stroke-width="1.2">
+    <rect x="10"  y="30" width="110" height="60" rx="8" fill="#f3f4f6"/>
+    <rect x="150" y="30" width="120" height="60" rx="8" fill="#f3f4f6"/>
+    <rect x="300" y="20" width="200" height="80" rx="8" fill="#e8f0fe"/>
+    <rect x="530" y="20" width="250" height="80" rx="8" fill="#fde9d7"/>
+    <rect x="530" y="150" width="250" height="80" rx="8" fill="#e6f4ea"/>
+    <rect x="300" y="150" width="200" height="80" rx="8" fill="#e6f4ea"/>
+    <rect x="150" y="160" width="120" height="60" rx="8" fill="#f3f4f6"/>
+    <rect x="10"  y="160" width="110" height="60" rx="8" fill="#f3f4f6"/>
+    <rect x="150" y="290" width="350" height="70" rx="8" fill="#fff8e1"/>
+  </g>
+  <g text-anchor="middle" fill="#111">
+    <text x="65" y="56" font-weight="bold">Client</text><text x="65" y="74">prompt, N, budget</text>
+    <text x="210" y="56" font-weight="bold">API + queue</text><text x="210" y="74">admission, rate limits</text>
+    <text x="400" y="44" font-weight="bold">Scheduler</text>
+    <text x="400" y="62">continuous batching: a pruned</text><text x="400" y="78">take's slot goes to the next request</text>
+    <text x="655" y="44" font-weight="bold">Generator workers (GPU)</text>
+    <text x="655" y="62">decode loop, paged KV cache,</text><text x="655" y="78">graph-captured step per batch size</text>
+    <text x="655" y="174" font-weight="bold">Checkpoint scorer</text>
+    <text x="655" y="192">codec-decode prefixes + early judge</text><text x="655" y="208">(its cost is part of the budget)</text>
+    <text x="400" y="174" font-weight="bold">Pruning policy + final judge</text>
+    <text x="400" y="192">keep the top fraction;</text><text x="400" y="208">final pick by a different model</text>
+    <text x="210" y="186" font-weight="bold">Audio store / CDN</text><text x="210" y="204">loudness-normalised</text>
+    <text x="65" y="186" font-weight="bold">Listener</text><text x="65" y="204">plays, keeps, skips</text>
+    <text x="325" y="314" font-weight="bold">Offline loop: corpus + logs</text>
+    <text x="325" y="332">replay any schedule exactly (row-keyed noise); validate judges;</text>
+    <text x="325" y="348">pairwise human picks → reward model / preference tuning</text>
+  </g>
+  <g stroke="#555" stroke-width="1.4" fill="none" marker-end="url(#a)">
+    <path d="M120,60 H148"/><path d="M270,60 H298"/><path d="M500,60 H528"/>
+    <path d="M640,100 V148"/><path d="M670,148 V102"/>
+    <path d="M530,190 H502"/><path d="M300,190 H272"/><path d="M150,190 H122"/>
+    <path d="M65,220 V325 H148"/>
+    <path d="M500,325 H740 V232" stroke-dasharray="5 4"/>
+  </g>
+  <g fill="#555" font-size="11">
+    <text x="632" y="128" text-anchor="end">prefixes</text><text x="676" y="128">keep / drop</text>
+    <text x="80" y="275">picks, skips</text><text x="610" y="318">new scorers, schedules</text>
+  </g>
+</svg>

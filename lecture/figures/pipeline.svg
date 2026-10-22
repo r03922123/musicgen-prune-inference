@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 230" width="780" height="230" font-family="Helvetica, Arial, sans-serif" font-size="12">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#555"/></marker>
+  </defs>
+  <rect width="780" height="230" fill="#fff"/>
+  <!-- boxes -->
+  <g stroke="#555" stroke-width="1.2">
+    <rect x="10"  y="60" width="110" height="74" rx="8" fill="#f3f4f6"/>
+    <rect x="140" y="60" width="110" height="74" rx="8" fill="#e8f0fe"/>
+    <rect x="270" y="48" width="130" height="98" rx="8" fill="#fde9d7"/>
+    <rect x="420" y="60" width="110" height="74" rx="8" fill="#f3f4f6"/>
+    <rect x="550" y="60" width="100" height="74" rx="8" fill="#e8f0fe"/>
+    <rect x="670" y="60" width="100" height="74" rx="8" fill="#f3f4f6"/>
+  </g>
+  <g text-anchor="middle" fill="#111">
+    <text x="65" y="86" font-weight="bold">Text prompt</text>
+    <text x="65" y="104">"lo-fi hip hop,</text><text x="65" y="119">warm piano"</text>
+    <text x="195" y="86" font-weight="bold">T5 encoder</text>
+    <text x="195" y="104">frozen, d = 768</text><text x="195" y="119">→ projected to 1024</text>
+    <text x="335" y="72" font-weight="bold">Transformer decoder</text>
+    <text x="335" y="90">24 layers, d = 1024</text>
+    <text x="335" y="106">420M parameters</text>
+    <text x="335" y="122">4 output heads,</text><text x="335" y="137">2048 codes each</text>
+    <text x="475" y="86" font-weight="bold">Audio tokens</text>
+    <text x="475" y="104">4 codebooks ×</text><text x="475" y="119">1500 frames</text>
+    <text x="600" y="86" font-weight="bold">EnCodec</text>
+    <text x="600" y="104">decoder</text><text x="600" y="119">640× upsample</text>
+    <text x="720" y="86" font-weight="bold">Waveform</text>
+    <text x="720" y="104">32 kHz mono</text><text x="720" y="119">30 s = 960k samples</text>
+  </g>
+  <g stroke="#555" stroke-width="1.4" fill="none" marker-end="url(#a)">
+    <path d="M120,97 H138"/><path d="M250,97 H268"/><path d="M400,97 H418"/>
+    <path d="M530,97 H548"/><path d="M650,97 H668"/>
+    <!-- autoregressive loop -->
+    <path d="M475,134 V170 H335 V148"/>
+  </g>
+  <text x="405" y="186" text-anchor="middle" fill="#b4580f">next frame fed back: 1,503 decoding steps</text>
+  <text x="195" y="40" text-anchor="middle" fill="#555">cross-attention</text>
+  <path d="M195,46 C230,30 270,30 300,46" stroke="#555" fill="none" stroke-dasharray="4 3" marker-end="url(#a)"/>
+  <text x="335" y="212" text-anchor="middle" fill="#555">CFG: every step runs twice (with and without the text), so 8 takes = 16 rows</text>
+</svg>

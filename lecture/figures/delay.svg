@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 230" width="700" height="230" font-family="Helvetica, Arial, sans-serif" font-size="12">
+  <rect width="700" height="230" fill="#fff"/>
+  <text x="380" y="22" text-anchor="middle" fill="#555">decoding step →</text>
+  <g text-anchor="middle" fill="#555">
+    <text x="166" y="44">1</text><text x="236" y="44">2</text><text x="306" y="44">3</text><text x="376" y="44">4</text>
+    <text x="446" y="44">5</text><text x="516" y="44">6</text><text x="586" y="44">7</text><text x="656" y="44">8</text>
+  </g>
+  <g text-anchor="end" fill="#333">
+    <text x="120" y="76">codebook 1 (coarse)</text><text x="120" y="116">codebook 2</text>
+    <text x="120" y="156">codebook 3</text><text x="120" y="196">codebook 4 (fine)</text>
+  </g>
+  <!-- cells: step s, codebook k holds frame t = s - k + 1 -->
+  <g stroke="#fff" stroke-width="3" font-weight="bold" text-anchor="middle">
+    <!-- row 1 -->
+    <rect x="131" y="52" width="70" height="38" fill="#4c78a8"/><rect x="201" y="52" width="70" height="38" fill="#f58518"/>
+    <rect x="271" y="52" width="70" height="38" fill="#54a24b"/><rect x="341" y="52" width="70" height="38" fill="#b279a2"/>
+    <rect x="411" y="52" width="70" height="38" fill="#e45756"/><rect x="481" y="52" width="70" height="38" fill="#72b7b2"/>
+    <rect x="551" y="52" width="70" height="38" fill="#9d755d"/><rect x="621" y="52" width="70" height="38" fill="#bab0ac"/>
+    <!-- row 2 -->
+    <rect x="131" y="92" width="70" height="38" fill="#e5e7eb"/><rect x="201" y="92" width="70" height="38" fill="#4c78a8"/>
+    <rect x="271" y="92" width="70" height="38" fill="#f58518"/><rect x="341" y="92" width="70" height="38" fill="#54a24b"/>
+    <rect x="411" y="92" width="70" height="38" fill="#b279a2"/><rect x="481" y="92" width="70" height="38" fill="#e45756"/>
+    <rect x="551" y="92" width="70" height="38" fill="#72b7b2"/><rect x="621" y="92" width="70" height="38" fill="#9d755d"/>
+    <!-- row 3 -->
+    <rect x="131" y="132" width="70" height="38" fill="#e5e7eb"/><rect x="201" y="132" width="70" height="38" fill="#e5e7eb"/>
+    <rect x="271" y="132" width="70" height="38" fill="#4c78a8"/><rect x="341" y="132" width="70" height="38" fill="#f58518"/>
+    <rect x="411" y="132" width="70" height="38" fill="#54a24b"/><rect x="481" y="132" width="70" height="38" fill="#b279a2"/>
+    <rect x="551" y="132" width="70" height="38" fill="#e45756"/><rect x="621" y="132" width="70" height="38" fill="#72b7b2"/>
+    <!-- row 4 -->
+    <rect x="131" y="172" width="70" height="38" fill="#e5e7eb"/><rect x="201" y="172" width="70" height="38" fill="#e5e7eb"/>
+    <rect x="271" y="172" width="70" height="38" fill="#e5e7eb"/><rect x="341" y="172" width="70" height="38" fill="#4c78a8"/>
+    <rect x="411" y="172" width="70" height="38" fill="#f58518"/><rect x="481" y="172" width="70" height="38" fill="#54a24b"/>
+    <rect x="551" y="172" width="70" height="38" fill="#b279a2"/><rect x="621" y="172" width="70" height="38" fill="#e45756"/>
+  </g>
+  <g text-anchor="middle" font-weight="bold" fill="#fff">
+    <text x="166" y="76">t1</text><text x="236" y="76">t2</text><text x="306" y="76">t3</text><text x="376" y="76">t4</text>
+    <text x="446" y="76">t5</text><text x="516" y="76">t6</text><text x="586" y="76">t7</text><text x="656" y="76">t8</text>
+    <text x="236" y="116">t1</text><text x="306" y="116">t2</text><text x="376" y="116">t3</text><text x="446" y="116">t4</text>
+    <text x="516" y="116">t5</text><text x="586" y="116">t6</text><text x="656" y="116">t7</text>
+    <text x="306" y="156">t1</text><text x="376" y="156">t2</text><text x="446" y="156">t3</text><text x="516" y="156">t4</text>
+    <text x="586" y="156">t5</text><text x="656" y="156">t6</text>
+    <text x="376" y="196">t1</text><text x="446" y="196">t2</text><text x="516" y="196">t3</text><text x="586" y="196">t4</text>
+    <text x="656" y="196">t5</text>
+  </g>
+  <g text-anchor="middle" fill="#888">
+    <text x="166" y="116">·</text><text x="166" y="156">·</text><text x="236" y="156">·</text>
+    <text x="166" y="196">·</text><text x="236" y="196">·</text><text x="306" y="196">·</text>
+  </g>
+</svg>

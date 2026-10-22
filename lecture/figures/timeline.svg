@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 200" width="780" height="200" font-family="Helvetica, Arial, sans-serif" font-size="12">
+  <rect width="780" height="200" fill="#fff"/>
+  <!-- one decode step = 18.7 ms -> 680 px (x 80..760), 36.4 px/ms -->
+  <text x="70" y="62" text-anchor="end" fill="#333">CPU</text>
+  <text x="70" y="122" text-anchor="end" fill="#333">GPU</text>
+  <rect x="80" y="48" width="680" height="22" fill="#f58518" opacity=".85"/>
+  <g stroke="#fff" stroke-width="1">
+    <path d="M100,48v22M124,48v22M148,48v22M172,48v22M196,48v22M220,48v22M244,48v22M268,48v22M292,48v22M316,48v22M340,48v22M364,48v22M388,48v22M412,48v22M436,48v22M460,48v22M484,48v22M508,48v22M532,48v22M556,48v22M580,48v22M604,48v22M628,48v22M652,48v22M676,48v22M700,48v22M724,48v22M748,48v22"/>
+  </g>
+  <rect x="80" y="108" width="680" height="22" fill="#f1f3f5" stroke="#ccc"/>
+  <!-- 28 kernels, ~8.5 px each = 238 px = 6.5 ms of 18.7 ms -->
+  <g fill="#4c78a8">
+    <rect x="104" y="108" width="8.5" height="22"/><rect x="128" y="108" width="8.5" height="22"/><rect x="152" y="108" width="8.5" height="22"/>
+    <rect x="176" y="108" width="8.5" height="22"/><rect x="200" y="108" width="8.5" height="22"/><rect x="224" y="108" width="8.5" height="22"/>
+    <rect x="248" y="108" width="8.5" height="22"/><rect x="272" y="108" width="8.5" height="22"/><rect x="296" y="108" width="8.5" height="22"/>
+    <rect x="320" y="108" width="8.5" height="22"/><rect x="344" y="108" width="8.5" height="22"/><rect x="368" y="108" width="8.5" height="22"/>
+    <rect x="392" y="108" width="8.5" height="22"/><rect x="416" y="108" width="8.5" height="22"/><rect x="440" y="108" width="8.5" height="22"/>
+    <rect x="464" y="108" width="8.5" height="22"/><rect x="488" y="108" width="8.5" height="22"/><rect x="512" y="108" width="8.5" height="22"/>
+    <rect x="536" y="108" width="8.5" height="22"/><rect x="560" y="108" width="8.5" height="22"/><rect x="584" y="108" width="8.5" height="22"/>
+    <rect x="608" y="108" width="8.5" height="22"/><rect x="632" y="108" width="8.5" height="22"/><rect x="656" y="108" width="8.5" height="22"/>
+    <rect x="680" y="108" width="8.5" height="22"/><rect x="704" y="108" width="8.5" height="22"/><rect x="728" y="108" width="8.5" height="22"/>
+    <rect x="752" y="108" width="8" height="22"/>
+  </g>
+  <g fill="#333">
+    <text x="80" y="38">CPU: Python + framework dispatch + ~300 kernel launches (each tick = many launches)</text>
+    <text x="80" y="152">GPU: ~500 kernels, mean 13 µs; busy 6.5 ms, idle 12.2 ms waiting for the CPU</text>
+  </g>
+  <line x1="80" y1="170" x2="760" y2="170" stroke="#555"/>
+  <path d="M80,165v10M760,165v10" stroke="#555"/>
+  <text x="420" y="190" text-anchor="middle" fill="#555">one decode step at batch 1 (2 rows with CFG): 18.7 ms wall time, measured on a Tesla T4 (schematic, not to scale per kernel)</text>
+</svg>
