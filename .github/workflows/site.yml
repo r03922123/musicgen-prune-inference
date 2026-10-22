@@ -1,4 +1,5 @@
-# Builds, tests and deploys the Eight Takes site (site/) to GitHub Pages.
+# Builds, tests and deploys the site to GitHub Pages: the lecture (lecture/) at the root and the
+# Eight Takes game (site/) at /play/.
 # Audio comes from the GitHub Release pinned in site/audio.lock (the WAVs it is built from live on
 # Kaggle, not in this repo); everything else is built from committed files.
 name: site
@@ -6,7 +7,7 @@ name: site
 on:
   push:
     branches: [master]
-    paths: ["site/**", "torch/build_site.py", "torch/evaluate.py", "torch/frontier.py",
+    paths: ["site/**", "lecture/**", "torch/build_site.py", "torch/future.py", "torch/evaluate.py", "torch/frontier.py",
             "torch/bracket.py", "torch/tests/**", "results/**", "data/corpus/*.json",
             ".github/workflows/site.yml"]
   workflow_dispatch:
@@ -32,7 +33,8 @@ jobs:
       - name: Python tests (evaluation, bracket, site build)
         run: |
           pip install --quiet numpy scipy pyloudnorm pytest
-          python -m pytest -q torch/tests/test_evaluate.py torch/tests/test_frontier.py torch/tests/test_build_site.py
+          python -m pytest -q torch/tests/test_evaluate.py torch/tests/test_frontier.py torch/tests/test_build_site.py \
+            torch/tests/test_lecture_numbers.py
       - name: data.json is reproducible from committed results
         run: |
           python torch/build_site.py --no-audio
@@ -43,6 +45,11 @@ jobs:
       - name: JS tests (game logic == results/bracket.json)
         run: node --test site/tests/*.test.mjs
 
+      - name: Build the lecture
+        run: |
+          npm ci --prefix lecture --silent
+          node lecture/build.mjs _site
+
       - name: Fetch and verify audio
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |
@@ -52,19 +59,20 @@ jobs:
           tar -xf "$RUNNER_TEMP/$asset" -C site
           test "$(ls site/audio/*.mp3 | wc -l)" -eq 400
 
-      - name: Assemble the site
+      - name: Assemble the site (lecture at /, game at /play/)
         run: |
-          mkdir _site
-          cp -R site/index.html site/style.css site/app.js site/bracket.js site/data.json site/fonts site/audio _site/
+          mkdir -p _site/play
+          cp -R site/index.html site/style.css site/app.js site/bracket.js site/data.json site/fonts site/audio _site/play/
           touch _site/.nojekyll
 
-      - name: Browser smoke test (full game, desktop and mobile)
+      - name: Browser smoke tests (lecture; full game, desktop and mobile)
         run: |
           npm install --no-save --silent playwright
           npx playwright install --with-deps --only-shell chromium > /dev/null
           python -m http.server 8765 --bind 127.0.0.1 --directory _site > /dev/null 2>&1 &
           sleep 1
-          node site/tests/smoke.mjs http://127.0.0.1:8765/ "$RUNNER_TEMP"
+          node lecture/tests/smoke.mjs http://127.0.0.1:8765/
+          node site/tests/smoke.mjs http://127.0.0.1:8765/play/ "$RUNNER_TEMP"
 
       - uses: actions/upload-pages-artifact@v3
         with: { path: _site }

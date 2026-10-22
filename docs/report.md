@@ -1,4 +1,6 @@
-# musicgen-prune-inference
+# Research report: early pruning for best-of-N MusicGen
+
+*The full study behind [the lecture](https://r03922123.github.io/musicgen-prune-inference/): every table, sample size, limitation and run command. Paths are relative to the repo root.*
 
 Cheaper best-of-N music generation: MusicGen best-of-8 with **checkpoint pruning**, measured
 offline on a fixed corpus, in MLX (M1 MacBook Air) and PyTorch + HF transformers (Kaggle T4).
@@ -139,7 +141,7 @@ Red-team prompts (music that starts quiet and builds) are where aggressive sched
 At 5 s / 0.5 only 3 of 10 keep the unpruned pick, versus 62 % on MusicCaps. A 5 s first
 checkpoint is too early for slow-build material.
 
-![Q1 and Q2](results/frontier.png)
+![Q1 and Q2](../results/frontier.png)
 
 Judge-based numbers for the same schedules (regret, top-2 false-kill under Audiobox CE) are
 also in `results/frontier.json`. Do not compare false-kill across rows with different final
