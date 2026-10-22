@@ -26,7 +26,7 @@ for (const [name, viewport] of [["desktop", { width: 1280, height: 860 }], ["mob
     if (m === 0) await page.screenshot({ path: `${shots}/match-${name}.png` });
     if (m === 0) {
       // review fix 7: leaving mid-game asks first; "Keep playing" keeps the game
-      await page.click('[data-nav="how"]');
+      await page.click('[data-nav="lecture"]');
       if (!(await page.isVisible("#leave"))) throw new Error("no leave dialog during a game");
       await page.click("#leave-stay");
       if (await page.isHidden("#game")) throw new Error("game lost after Keep playing");
@@ -51,11 +51,8 @@ for (const [name, viewport] of [["desktop", { width: 1280, height: 860 }], ["mob
   if (!/agreed on \d of 7/.test(await page.textContent("#reveal-summary"))) throw new Error("no reveal summary");
   await page.click("#breakdown > summary");
   await page.screenshot({ path: `${shots}/reveal-${name}.png`, fullPage: true });
-  await page.click('[data-nav="how"]');
-  await page.waitForTimeout(400);
-  const unfilled = await page.$$eval("[data-num]", (els) => els.filter((e) => !e.textContent || e.textContent === "?").length);
-  if (unfilled) throw new Error(`${unfilled} article numbers not filled from data.json`);
-  await page.screenshot({ path: `${shots}/how-${name}.png`, fullPage: true });
+  if (new URL(await page.getAttribute('[data-nav="lecture"]', "href"), page.url()).href !== new URL("../", base).href)
+    throw new Error("lecture link does not point to the site root");
   const games = await page.evaluate(() => JSON.parse(localStorage.getItem("eight-takes-games")));
   if (games.length !== 1 || games[0].matches.length !== 7) throw new Error("game log not saved");
   console.log(`${name}: game complete, agreement ${agree}`);

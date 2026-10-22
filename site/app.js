@@ -17,12 +17,10 @@ const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const fmtT = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const pct = (x) => `${Math.round(x * 100)}%`;
-const sgnless = (x, d = 2) => `${x < 0 ? "−" : ""}${Math.abs(x).toFixed(d)}`;
 const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 // Tiers instead of exact ranks: neighbouring takes are often within a critic's noise.
 const tier = (r) => (r <= 2 ? "top" : r >= 7 ? "bottom" : "middle");
 const TIER_LABEL = { top: "Top two", middle: "Middle", bottom: "Bottom two" };
-const sgn = (x, d = 2) => `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(d)}`;
 
 let DATA, G = null;           // G = current game
 
@@ -347,33 +345,13 @@ function saveGame(ag) {
   store.set("eight-takes-games", games.slice(-200));
 }
 
-// ---------- how it works ----------
-function renderHow() {
-  const h = DATA.headline, s = h["schedule_10_0.5"], b = h.bracket, sel = h.selection;
-  const ci = (m, f = pct) => `${f(m.lo)}–${f(m.hi)}`;
-  const FMT = { pct, int: (x) => String(Math.round(x)), f1: (x) => x.toFixed(1), f2: (x) => sgnless(x, 2) };
-  $$("[data-num]").forEach((el) => {
-    const v = el.dataset.num.split("/").reduce((o, k) => o?.[k], h);
-    el.textContent = typeof v === "number" ? FMT[el.dataset.fmt ?? "f2"](v) : "?";
-  });
-  const items = [
-    [`${pct(s.musiccaps.compute.mean)} of the compute`,
-     `Cutting at 10 s and 20 s (8 → 4 → 2) generates ${pct(s.musiccaps.compute.mean)} of the audio, and CLAP still keeps the take it would pick from all eight full songs on ${pct(s.musiccaps.same_winner.mean)} of MusicCaps prompts (95% CI ${ci(s.musiccaps.same_winner)}, n = ${s.musiccaps.same_winner.n}) and ${pct(s.redteam.same_winner.mean)} of slow-build prompts (n = ${s.redteam.same_winner.n}).`,
-     s.source],
-    [`${pct(b.musiccaps.same_as_unpruned.mean)} survive the draw`,
-     `With a random knockout draw like yours (all 315 possible draws per prompt), the AI picker's full-length favourite becomes champion ${pct(b.musiccaps.same_as_unpruned.mean)} of the time (95% CI ${ci(b.musiccaps.same_as_unpruned)}, n = ${b.musiccaps.same_as_unpruned.n}), against ${pct(s.musiccaps.same_winner.mean)} for top-half pruning at the same checkpoints.`,
-     b.source],
-    ["Is the picker's favourite better?",
-     `Barely. Versus a random take, CLAP's pick scores ${sgn(sel.cmi_qual.gain_vs_random.mean)} on CMI-RM quality (95% CI ${sgn(sel.cmi_qual.gain_vs_random.lo)} to ${sgn(sel.cmi_qual.gain_vs_random.hi)}), against a best possible ${sgn(sel.cmi_qual.oracle_gain.mean)}, and ${sgn(sel.mulan.gain_vs_random.mean, 3)} on MuQ-MuLan (CI ${sgn(sel.mulan.gain_vs_random.lo, 3)} to ${sgn(sel.mulan.gain_vs_random.hi, 3)}); n = ${sel.mulan.gain_vs_random.n}. Keeping the same winner cheaply doesn't make the winner good.`,
-     sel.source],
-  ];
-  $("#findings").innerHTML = items.map(([t, body, src]) =>
-    `<div class="finding"><b>${t}</b><p>${body}</p><span class="src">Measured · source: ${src}</span></div>`).join("");
-}
-
 // ---------- wiring ----------
 function wire() {
-  const go = (v) => { audio.stop(); if (G) G.active = false; history.replaceState(null, "", v === "how" ? "#how" : "#"); show(v); };
+  const go = (v) => {
+    audio.stop(); if (G) G.active = false;
+    if (v === "lecture") { location.href = "../"; return; }
+    history.replaceState(null, "", "#"); show(v);
+  };
   let pending = null;
   const askLeave = (v) => { pending = v; $("#leave").showModal(); };
   $("#leave-stay").onclick = () => $("#leave").close();
@@ -384,7 +362,7 @@ function wire() {
   }));
   window.addEventListener("popstate", () => {          // browser back during a game
     if (G?.active) { history.pushState({ game: true }, "", "#play"); askLeave("home"); }
-    else show(location.hash === "#how" ? "how" : "home");
+    else show("home");
   });
   const keysOn = store.get("eight-takes-keys", true);
   $("#keys-on").checked = keysOn; document.body.classList.toggle("no-keys", !keysOn);
@@ -421,7 +399,7 @@ function wire() {
 
 async function main() {
   DATA = await (await fetch("data.json")).json();
-  renderShelf(); renderHow(); wire();
-  show(location.hash === "#how" ? "how" : "home");
+  renderShelf(); wire();
+  show("home");
 }
 main().catch((e) => { document.body.insertAdjacentHTML("afterbegin", `<p style="padding:16px">Failed to load: ${e.message}</p>`); });
