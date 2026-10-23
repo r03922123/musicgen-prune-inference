@@ -1,8 +1,8 @@
 {
-  "name": "musicgen-prune-lecture",
+  "name": "musicgen-prune-post",
   "private": true,
   "type": "module",
-  "description": "Builds lecture/lecture.md into the site's home page (math rendered at build time, self-hosted).",
+  "description": "Builds post/post.md and its interactive figures into a static page (math rendered at build time, self-hosted).",
   "scripts": { "build": "node build.mjs" },
   "dependencies": {
     "highlight.js": "11.12.0",

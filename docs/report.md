@@ -1,6 +1,6 @@
 # Research report: early pruning for best-of-N MusicGen
 
-*The full study behind [the lecture](https://r03922123.github.io/musicgen-prune-inference/): every table, sample size, limitation and run command. Paths are relative to the repo root.*
+*The full study behind [the post](https://r03922123.github.io/musicgen-prune-inference/): every table, sample size, limitation and run command. Paths are relative to the repo root.*
 
 Cheaper best-of-N music generation: MusicGen best-of-8 with **checkpoint pruning**, measured
 offline on a fixed corpus, in MLX (M1 MacBook Air) and PyTorch + HF transformers (Kaggle T4).
@@ -25,16 +25,15 @@ whose value over a random pick is, at best, small on these 40 prompts.
 Details, sample sizes and limitations below. Every number traces to a committed file under
 `results/` or `torch/`, and each is labelled *measured*, *derived* or *hypothesis*.
 
-## Play it: Eight Takes
+## Explore it
 
 **[r03922123.github.io/musicgen-prune-inference](https://r03922123.github.io/musicgen-prune-inference/)** is a
-listening game built on the same corpus (source in `site/`). You knock out a prompt's 8 takes
-in a bracket: quarter-finals on 10 s clips, semi-finals on 20 s, the final on the full 30 s.
-That is the 10 s / keep-0.5 schedule with you as the pruner. CLAP plays the same draw as the
-"AI picker", and the four Q2 judges are shown as critics in the reveal. Nothing is generated
-live; clips are cut from the saved takes, loudness-matched with one linear gain per take.
+long-form post on this study (source in `post/`). Its interactive figures run the schedule simulation of
+`torch/evaluate.py`, ported to JavaScript, on the corpus scores in your browser, with the audio of every take, and
+`post/tests/sim.test.mjs` checks that they reproduce `results/frontier.json` and `results/future_only.json`.
+(An earlier listening game, Eight Takes, was retired on 2026-10-23; `/play/` redirects to the post.)
 
-How much the random draw costs (*measured*, `results/bracket.json`, all 315 brackets per
+Knockout brackets, for human pairwise studies (*measured*, `results/bracket.json`, all 315 brackets per
 prompt, CLAP as the player): the bracket champion equals the unpruned CLAP pick on
 0.81 [0.72, 0.88] of MusicCaps prompts (n = 40) and 0.76 [0.61, 0.90] of red-team prompts
 (n = 10), versus 0.875 and 0.80 for top-k pruning at the same checkpoints. Judge regret is
@@ -282,15 +281,15 @@ uv run python torch/agreement.py                    # exploratory judge agreemen
 uv run python torch/listen.py                       # blind A/B test (needs data/wavs/, see below)
 uv run python torch/clap_chunks.py                  # CLAP per 10 s chunk of every take (CPU, ~25 min)
 uv run python torch/future.py                       # future-only check of early CLAP
-uv run python torch/bracket.py                      # the game's bracket vs top-k, all 315 draws
-uv run python torch/build_site.py                   # site/data.json + site/audio/*.mp3 (needs ffmpeg)
-node --test site/tests/*.test.mjs                    # JS game logic == results/bracket.json
+uv run python torch/bracket.py                      # knockout bracket vs top-k, all 315 draws
+uv run python torch/build_post_data.py              # post/data.json + post/audio/*.mp3 (needs ffmpeg)
+node --test post/tests/sim.test.mjs                  # the post's figures == results/
 ```
 
-The site deploys itself: every push to `master` that touches `site/`, the results or the corpus
-runs `.github/workflows/site.yml`, which deploys to GitHub Pages only if all tests and a full
-browser game pass. The 400 MP3s are not in git; they are the Release asset pinned in
-`site/audio.lock` (rebuild with `torch/build_site.py`, then publish a new `site-audio-vN`).
+The post deploys itself: every push to `master` that touches `post/`, the results or the corpus
+runs `.github/workflows/site.yml`, which deploys to GitHub Pages only if all tests and a browser
+smoke test pass. The 400 MP3s are not in git; they are the Release asset pinned in
+`post/audio.lock` (rebuild with `torch/build_post_data.py`, then publish a new `site-audio-vN`).
 
 GPU jobs run on Kaggle (one file per kernel; sources are embedded by `kaggle_job/bundle.py`):
 `kaggle_job/` (self-check + steps bench), `kaggle_corpus/` (the corpus), `kaggle_judge/` and
@@ -311,9 +310,9 @@ and untar into `data/wavs/`.
 | `torch/evaluate.py`, `torch/frontier.py` | schedule simulation, Q1/Q2 metrics, bootstrap, figure |
 | `torch/listen.py` | blind A/B listening test |
 | `torch/profile_decode.py` | torch.profiler breakdown of decode steps |
-| `torch/bracket.py`, `torch/build_site.py` | bracket simulation; game data and audio export |
-| `site/` | Eight Takes listening game (static) |
-| `.github/workflows/site.yml`, `site/audio.lock` | site CI: tests, data.json reproducibility check, audio fetched from a pinned Release and hash-checked, browser smoke test, Pages deploy |
+| `torch/bracket.py`, `torch/build_post_data.py` | bracket simulation; the post's figure data and audio export |
+| `post/` | the post: `post.md`, interactive figures (`js/`), build script, tests |
+| `.github/workflows/site.yml`, `post/audio.lock` | CI: tests, data.json reproducibility check, audio fetched from a pinned Release and hash-checked, browser smoke test, Pages deploy |
 | `vendor/` | unmodified MusicGen / EnCodec / T5 from ml-explore/mlx-examples (MIT) |
 
 ## Limitations

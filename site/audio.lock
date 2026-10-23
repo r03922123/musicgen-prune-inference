@@ -1,7 +1,0 @@
-# Pins the site's audio: a GitHub Release asset, verified by the site workflow before deploying.
-# To publish new audio: python torch/build_site.py, then
-#   COPYFILE_DISABLE=1 tar --no-xattrs -cf site-audio-vN.tar -C site audio
-#   gh release create site-audio-vN site-audio-vN.tar   and update the three lines below.
-tag=site-audio-v1
-asset=site-audio-v1.tar
-sha256=081f19a6d998a7eacfad498f2781de6fac5226088a55aa78f52a8d9120f8aea7

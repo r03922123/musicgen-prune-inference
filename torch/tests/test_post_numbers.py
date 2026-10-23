@@ -1,18 +1,18 @@
-"""Every headline number in lecture/lecture.md must be what the committed results files say.
+"""Every headline number in post/post.md must be what the committed results files say.
 
-Formats the value from the results JSON the way the lecture prints it and asserts that exact
-string appears in the lecture. A changed result without an updated lecture fails CI."""
+Formats the value from the results JSON the way the post prints it and asserts that exact
+string appears in the post. A changed result without an updated post fails CI."""
 import json
 from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-TEXT = (ROOT / "lecture/lecture.md").read_text()
+TEXT = (ROOT / "post/post.md").read_text()
 R = lambda name: json.loads((ROOT / "results" / name).read_text())
 
 
 def s(x, d=2):
-    """Signed, with a real minus sign, as the lecture's tables print it."""
+    """Signed, with a real minus sign, as the post's tables print it."""
     return f"{'+' if x >= 0 else '−'}{abs(x):.{d}f}"
 
 
@@ -53,5 +53,5 @@ def expected():
 
 
 @pytest.mark.parametrize("literal", expected())
-def test_lecture_quotes_the_results(literal):
-    assert literal in TEXT, f"lecture.md does not contain {literal!r} (from results/)"
+def test_post_quotes_the_results(literal):
+    assert literal in TEXT, f"post.md does not contain {literal!r} (from results/)"

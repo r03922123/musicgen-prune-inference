@@ -1,5 +1,5 @@
 """
-The listening game's pruning, simulated with CLAP as the player (site/, 2026-10-20).
+Knockout-bracket pruning (as a human pairwise study would run it), simulated with CLAP as the player (2026-10-20).
 
   python torch/bracket.py --corpus data/corpus --out results
 

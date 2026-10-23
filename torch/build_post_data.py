@@ -1,21 +1,21 @@
 """
-Build the listening game's data and audio (site/, 2026-10-20). Mac, no GPU, no model calls.
+Build the post's interactive-figure data and audio (post/). Mac, no GPU, no model calls.
 
-  python torch/build_site.py                 # site/data.json + site/audio/<id>_<row>.mp3
-  python torch/build_site.py --no-audio      # data.json only
+  python torch/build_post_data.py                 # post/data.json + post/audio/<id>_<row>.mp3
+  python torch/build_post_data.py --no-audio      # data.json only
 
-data.json holds, per prompt, the caption, CLAP prefix scores at the game's rounds (10, 20, 30 s)
-and the four Q2 judges' scores, plus headline numbers copied from committed results files (each
-with its source file and n). Audio: every take loudness-normalised to -16 LUFS with one linear
-gain (no compression, so slow builds keep their dynamics), peak-limited, boost capped at
-+15 dB, 64 kbps mono MP3.
+data.json holds, per prompt, the caption, CLAP scores of every 5 s prefix, CLAP of each 10 s chunk
+(results/clap_chunks.json) and the four Q2 judges' scores. The figures recompute the committed
+results from it in the browser; post/tests/sim.test.mjs checks they match results/. Audio: every
+take loudness-normalised to -16 LUFS with one linear gain (no compression, so slow builds keep
+their dynamics), peak-limited, boost capped at +15 dB, 64 kbps mono MP3.
 """
 import argparse, json, re, shutil, subprocess, tempfile
 from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
-ROUNDS = (10, 20, 30)
+PREFIXES = (5, 10, 15, 20, 25, 30)
 JUDGES = ("aes_CE", "mulan", "cmi_qual", "cmi_ali")
 TARGET_LUFS, PEAK_DBFS, MAX_BOOST_DB = -16.0, -1.0, 15.0
 
@@ -26,47 +26,15 @@ def title(caption, n=64):
     return t if len(t) <= n else t[:n].rsplit(" ", 1)[0] + "…"
 
 
-def prompts(recs):
+def prompts(recs, chunks):
     out = []
     for r in recs:
         s = r["scores"]
         out.append({"id": r["id"], "set": "redteam" if r["id"].startswith("rt_") else "musiccaps",
                     "title": title(r["prompt"]), "caption": r["prompt"], "n": r["n"],
-                    "clap": {str(t): s["clap"][str(t)] for t in ROUNDS},
+                    "clap": {str(t): s["clap"][str(t)] for t in PREFIXES},
+                    "chunks": chunks[r["id"]],
                     "judges": {j: s[j] for j in JUDGES}})
-    return out
-
-
-def headline(results):
-    """Numbers shown on the page, copied (not recomputed) from committed results files."""
-    R = Path(results)
-    fr = json.loads((R / "frontier.json").read_text())
-    br = json.loads((R / "bracket.json").read_text())
-    pr = json.loads((R / "profile_decode_small_float16_pretrained_t4.json").read_text())
-    ag = json.loads((R / "judge_agreement.json").read_text())
-    sched = {f"{s['first']}_{s['keep']}": s for s in fr["schedules"] if s["first"]}
-    pick = lambda d: {k: d[k] for k in ("mean", "lo", "hi", "n")}
-    out = {"schedule_10_0.5": {"source": "results/frontier.json"},
-           "selection": {"source": "results/frontier.json"},
-           "bracket": {"source": "results/bracket.json"},
-           "profile_b1": {"source": "results/profile_decode_small_float16_pretrained_t4.json"},
-           "agreement": {"source": "results/judge_agreement.json", "n_prompts": ag["n_prompts"]}}
-    for pair in ("clap~mulan", "clap~cmi_qual", "clap~aes_CE"):
-        a = ag["pairs"][pair]
-        out["agreement"][pair] = {"between": a["between"], "within": pick(a["within"])}
-    for st in ("musiccaps", "redteam"):
-        m = sched["10_0.5"]["sets"][st]
-        out["schedule_10_0.5"][st] = {"compute": pick(m["compute"]), "same_winner": pick(m["same_winner"])}
-        b = br["judges"]["cmi_qual"][st]
-        out["bracket"][st] = {"same_as_unpruned": pick(b["same_as_unpruned"]),
-                              "same_as_topk": pick(b["same_as_topk"])}
-    for j in JUDGES:
-        sel = fr["selection"][j]["musiccaps"]
-        out["selection"][j] = {"gain_vs_random": pick(sel["gain_vs_random"]),
-                               "oracle_gain": pick(sel["oracle_gain"])}
-    b1 = pr["batches"]["1"]
-    out["profile_b1"].update({k: b1[k] for k in ("wall_ms_per_step", "gpu_busy_ms_per_step",
-                                                  "gpu_share_of_wall", "kernels_per_step")})
     return out
 
 
@@ -94,12 +62,13 @@ def main():
     ap.add_argument("--corpus", default=str(ROOT / "data/corpus"))
     ap.add_argument("--results", default=str(ROOT / "results"))
     ap.add_argument("--wavs", default=str(ROOT / "data/wavs"))
-    ap.add_argument("--out", default=str(ROOT / "site"))
+    ap.add_argument("--out", default=str(ROOT / "post"))
     ap.add_argument("--no-audio", action="store_true")
     a = ap.parse_args()
     recs = [json.loads(p.read_text()) for p in sorted(Path(a.corpus).glob("*.json"))]
-    data = {"model": recs[0]["model"], "seconds": recs[0]["seconds"], "rounds": list(ROUNDS),
-            "prompts": prompts(recs), "headline": headline(a.results)}
+    chunks = json.loads((Path(a.results) / "clap_chunks.json").read_text())
+    data = {"model": recs[0]["model"], "seconds": recs[0]["seconds"], "prefixes": list(PREFIXES),
+            "prompts": prompts(recs, chunks)}
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "data.json").write_text(json.dumps(data, separators=(",", ":")))

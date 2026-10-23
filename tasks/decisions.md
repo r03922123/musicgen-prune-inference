@@ -163,3 +163,16 @@ hypothesis supported on MusicCaps (n = 40), every testable schedule keeps the 20
 above chance, e.g. 10 s / 0.65: 0.88 vs 0.50, excess +0.38 [+0.28, +0.47]. Red-team (n = 10):
 same direction, all CIs reach 0 or below. 5 s / 0.65 and 5 s / 0.75 not testable as pre-specified.
 Exploratory reference: clap10 vs chunk-1 within-prompt Spearman +0.99, confirming the overlap.
+
+## 2026-10-23: retire the Eight Takes game; the lecture becomes a post with interactive figures
+
+- The game is removed (`site/`); `/play/` redirects to the post's pruning figure. Reason: it was a
+  bracket of personal taste, so it taught little about the method; the figures that replace it run
+  the actual schedule simulation on the actual corpus scores, with the same audio.
+- Format: Lil'Log-style long-form post (survey voice, author-year citations, numbered references,
+  citation block), with Distill-style interactive figures where the claim is a mechanism or a result
+  (delay pattern, best-of-N curve, pruning, the C1 leak). Listed on the hub at r03922123.github.io;
+  still built and deployed from this repo so its tests gate it.
+- Figures recompute results in the browser (`post/js/sim.js`); `post/tests/sim.test.mjs` requires
+  agreement with results/frontier.json and results/future_only.json to 1e-9. Schedules outside the
+  committed grid (first checkpoint 15 s or 20 s) are labelled as exploration, not results.

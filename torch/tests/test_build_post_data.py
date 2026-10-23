@@ -1,8 +1,8 @@
-"""build_site.py: display titles, the per-prompt payload and the headline copy."""
+"""build_post_data.py: display titles, the per-prompt payload, loudness gain."""
 import json
 from pathlib import Path
 import numpy as np
-from build_site import ROUNDS, gain_db, headline, prompts, title
+from build_post_data import PREFIXES, gain_db, prompts, title
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -14,24 +14,23 @@ def test_title_takes_first_clause_and_cuts_at_word():
     assert len(t) <= 65 and t.endswith("…") and not t.startswith(" ")
 
 
-def test_prompts_payload_keeps_only_game_rounds_and_q2_judges():
+def test_prompts_payload_keeps_prefixes_chunks_and_q2_judges():
     s = {"clap": {str(t): [t] * 8 for t in range(5, 31, 5)},
          **{j: [1.0] * 8 for j in ("aes_CE", "aes_PQ", "mulan", "cmi_qual", "cmi_ali")}}
-    p = prompts([{"id": "rt_00", "prompt": "slow build, then loud", "n": 8, "scores": s}])[0]
+    p = prompts([{"id": "rt_00", "prompt": "slow build, then loud", "n": 8, "scores": s}],
+                {"rt_00": [[0.1, 0.2, 0.3]] * 8})[0]
     assert p["set"] == "redteam" and p["title"] == "slow build"
-    assert list(p["clap"]) == [str(t) for t in ROUNDS] and p["clap"]["20"] == [20] * 8
+    assert list(p["clap"]) == [str(t) for t in PREFIXES] and p["clap"]["20"] == [20] * 8
+    assert p["chunks"][0] == [0.1, 0.2, 0.3]
     assert set(p["judges"]) == {"aes_CE", "mulan", "cmi_qual", "cmi_ali"}
 
 
-def test_headline_copies_committed_numbers():
-    h = headline(ROOT / "results")
-    fr = json.loads((ROOT / "results/frontier.json").read_text())
-    s = next(x for x in fr["schedules"] if x["first"] == 10 and x["keep"] == 0.5)
-    assert h["schedule_10_0.5"]["musiccaps"]["same_winner"]["mean"] == s["sets"]["musiccaps"]["same_winner"]["mean"]
-    assert h["schedule_10_0.5"]["musiccaps"]["same_winner"]["n"] == 40
-    assert all("source" in v for v in h.values())
-    ag = json.loads((ROOT / "results/judge_agreement.json").read_text())
-    assert h["agreement"]["clap~mulan"]["within"]["mean"] == ag["pairs"]["clap~mulan"]["within"]["mean"]
+def test_committed_data_json_is_reproducible():
+    """post/data.json is what the builder makes from the committed corpus and chunk scores."""
+    recs = [json.loads(p.read_text()) for p in sorted((ROOT / "data/corpus").glob("*.json"))]
+    chunks = json.loads((ROOT / "results/clap_chunks.json").read_text())
+    got = json.loads((ROOT / "post/data.json").read_text())
+    assert got["prompts"] == json.loads(json.dumps(prompts(recs, chunks)))
 
 
 def test_gain_respects_peak_limit():
