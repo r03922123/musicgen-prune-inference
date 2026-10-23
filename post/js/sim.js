@@ -100,3 +100,12 @@ export function meanRho(prompts, which) {
   const v = prompts.map((p) => spearman(p.clap["10"], chunkTarget(p, which))).filter((x) => !Number.isNaN(x));
   return mean(v);
 }
+
+// Judge agreement, as torch/agreement.py computes it. A judge is "clap" (CLAP at 30 s) or a key of p.judges.
+export const judgeScores = (p, j) => (j === "clap" ? p.clap["30"] : p.judges[j]);
+export function agreement(prompts, a, b) {
+  const within = prompts.map((p) => spearman(judgeScores(p, a), judgeScores(p, b)));
+  const between = spearman(prompts.map((p) => mean(judgeScores(p, a))), prompts.map((p) => mean(judgeScores(p, b))));
+  const topMatch = mean(prompts.map((p) => +(argmax(judgeScores(p, a)) === argmax(judgeScores(p, b)))));
+  return { within: mean(within.filter((x) => !Number.isNaN(x))), perPrompt: within, between, topMatch };
+}

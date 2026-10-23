@@ -1,5 +1,8 @@
 # Decisions log (SPEC 0.5)
 
+Section numbers like "SPEC 0.5" refer to the original project spec, retired on 2026-10-24 together with the day-1
+plan and the research report (the post now holds every result); all three remain in git history before that date.
+
 ## 2026-10-17
 
 **CLAP prefixes at 5/10/15/20/25/30 s, not only 10/20 s.** The frontier needs a 5 s first
@@ -176,3 +179,12 @@ Exploratory reference: clap10 vs chunk-1 within-prompt Spearman +0.99, confirmin
 - Figures recompute results in the browser (`post/js/sim.js`); `post/tests/sim.test.mjs` requires
   agreement with results/frontier.json and results/future_only.json to 1e-9. Schedules outside the
   committed grid (first checkpoint 15 s or 20 s) are labelled as exploration, not results.
+
+## 2026-10-24: judge agreement gains "same favourite take"; post simplified
+
+- `torch/agreement.py` now also reports `top_match`: the share of prompts where two judges' best take is the same
+  one (chance 1/8), bootstrap CI over prompts. Exploratory, like the rest of that file; added after seeing the
+  within-prompt correlations, to state them in plain terms. Re-running left every existing number unchanged.
+- The post was rewritten for readability (concrete example before formula, one idea per step) and gained Fig. 3,
+  a rank chart of two judges. SPEC.md, the day-1 plan and todo, and docs/report.md were retired: the post and this
+  log now hold every result and decision.

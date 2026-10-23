@@ -4,6 +4,7 @@
 // Markdown extensions:
 //   ^[text]                         a sidenote (margin note on wide screens, tap to open on phones)
 //   :::figure name [key=value ...]  an interactive figure (js/figures.js), caption until ":::"
+//   In words: ...                   a paragraph restating the formula above it in plain language
 import { readFileSync, writeFileSync, mkdirSync, cpSync, existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -78,6 +79,10 @@ marked.use({
       const id = slug(text);
       if (depth <= 3) toc.push({ depth, id, text });
       return `<h${depth} id="${id}"><a class="anchor" href="#${id}" aria-hidden="true">#</a>${text}</h${depth}>\n`;
+    },
+    paragraph({ tokens }) {                       // "In words: ..." restates the formula above it
+      const html = this.parser.parseInline(tokens);
+      return html.startsWith("In words:") ? `<p class="inwords">${html.slice(9).trim()}</p>\n` : `<p>${html}</p>\n`;
     },
     image({ href, title, text }) {
       const src = href.replace(/^\.\.\/results\//, "results/");

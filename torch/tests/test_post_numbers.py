@@ -45,6 +45,8 @@ def expected():
     out += [s(p["musiccaps"]["clap10_vs_chunks23"]["mean"]),
             ci(p["redteam"]["clap10_vs_chunks23"], signed=True), s(p["musiccaps"]["clap10_vs_chunk1"]["mean"])]
     out += [ci(ag["pairs"]["clap~mulan"]["within"], signed=True), s(ag["pairs"]["clap~mulan"]["between"])]
+    out += [ci(ag["pairs"][k]["top_match"]) for k in ("clap~mulan", "clap~cmi_qual")]
+    out += [ci(ag["pairs"]["clap~cmi_qual"]["within"], signed=True), s(ag["pairs"]["clap~cmi_qual"]["between"])]
     out += [ci(br["judges"]["cmi_qual"]["musiccaps"]["same_as_unpruned"])]
     b1, b8 = pr["1"], pr["8"]
     out += [f"| 1 (2) | {b1['wall_ms_per_step']:.1f} | {b1['gpu_busy_ms_per_step']:.1f} | {b1['gpu_share_of_wall']:.0%} | {b1['kernels_per_step']:.0f} |",

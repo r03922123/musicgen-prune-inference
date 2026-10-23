@@ -1,5 +1,5 @@
 // Post page smoke test: renders; every formula, figure and interactive figure renders; the pruning
-// figure responds and plays audio; no third-party requests; no horizontal scroll on a phone.
+// and agreement figures respond and plays audio; no third-party requests; no horizontal scroll on a phone.
 //   node post/tests/smoke.mjs http://127.0.0.1:8765/ [screenshotDir]     (needs the playwright package)
 import { chromium } from "playwright";
 
@@ -34,7 +34,7 @@ for (const [name, width] of [["desktop", 1366], ["mobile", 390]]) {
   if (!r.katex || r.katexErrors || r.rawDollars) errors.push(`${name}: math katex=${r.katex} errors=${r.katexErrors} unrendered=${r.rawDollars}`);
   if (r.brokenImages.length) errors.push(`${name}: broken images ${r.brokenImages}`);
   if (r.hscroll) errors.push(`${name}: horizontal scroll`);
-  if (r.live.length !== 6 || r.live.some(([, ok]) => !ok)) errors.push(`${name}: interactive figures ${JSON.stringify(r.live)}`);
+  if (r.live.length !== 7 || r.live.some(([, ok]) => !ok)) errors.push(`${name}: interactive figures ${JSON.stringify(r.live)}`);
   if (r.sidenotes < 3) errors.push(`${name}: sidenotes ${r.sidenotes}`);
 
   // The pruning figure responds to its controls and recomputes over all prompts.
@@ -43,16 +43,21 @@ for (const [name, width] of [["desktop", 1366], ["mobile", 390]]) {
   await fig.locator('input[name$="-first"][value="5"]').check();
   const after = await fig.locator(".readout").last().textContent();
   if (before === after || !/same winner 0\.30/.test(after)) errors.push(`${name}: pruner readout did not update: ${after}`);
-  if (await fig.locator('input[name$="-target"]').count()) errors.push(`${name}: Fig. 5 should not offer the target toggle`);
-  // Fig. 7: the leak-free target, and its testability rule.
+  if (await fig.locator('input[name$="-target"]').count()) errors.push(`${name}: Fig. 6 should not offer the target toggle`);
+  // Fig. 8: the leak-free target, and its testability rule.
   const fig7 = page.locator('figure[data-fig="pruner"]').nth(1);
-  if (!/target kept 0\.72 vs 0\.25 by chance/.test(await fig7.locator(".readout").last().textContent())) errors.push(`${name}: Fig. 7 kept rate`);
+  if (!/target kept 0\.72 vs 0\.25 by chance/.test(await fig7.locator(".readout").last().textContent())) errors.push(`${name}: Fig. 8 kept rate`);
   await fig7.locator('input[name$="-first"][value="15"]').check();
-  if (!/kept/.test(await fig7.locator(".readout").last().textContent())) errors.push(`${name}: Fig. 7 at 15 s should be testable`);
+  if (!/kept/.test(await fig7.locator(".readout").last().textContent())) errors.push(`${name}: Fig. 8 at 15 s should be testable`);
   // Fig. 1: switching layout changes the step count.
   const d = page.locator('figure[data-fig="delay"]');
   await d.locator('input[value="flatten"]').check();
   if (!/6,000/.test(await d.locator(".readout").textContent())) errors.push(`${name}: delay layout readout`);
+  // Fig. 3: the judge-agreement chart reproduces the committed within-prompt mean and responds.
+  const a = page.locator('figure[data-fig="agree"]');
+  if (!/ρ <b>\+0\.01<\/b>; same favourite in <b>0\.16<\/b>/.test(await a.locator(".readout").innerHTML())) errors.push(`${name}: agreement readout`);
+  await a.locator('input[value="all"]').check();
+  if (!/ρ = <b>\+0\.35<\/b>/.test(await a.locator(".readout").innerHTML())) errors.push(`${name}: agreement across-prompt view`);
   // Audio: pressing a take requests its MP3 and starts playing.
   const audioReq = page.waitForResponse((res) => /audio\/rt_00_3\.mp3$/.test(res.url()), { timeout: 8000 }).catch(() => null);
   await fig.locator(".take-b").nth(3).click();
@@ -63,7 +68,7 @@ for (const [name, width] of [["desktop", 1366], ["mobile", 390]]) {
     await fig.scrollIntoViewIfNeeded();
     await fig.screenshot({ path: `${shots}/pruner-${name}.png` });
     await page.screenshot({ path: `${shots}/top-${name}.png` });
-    for (const [i, f] of [[0, "delay"], [0, "bestofn"], [1, "bestofn"], [0, "leak"], [1, "pruner"]])
+    for (const [i, f] of [[0, "delay"], [0, "agree"], [1, "bestofn"], [0, "leak"], [1, "pruner"]])
       await page.locator(`figure[data-fig="${f}"]`).nth(i).screenshot({ path: `${shots}/${f}${i}-${name}.png` });
   }
   console.log(`${name}: ${r.h2} sections, ${r.katex} formulas, ${r.live.length} interactive figures, ${r.sidenotes} sidenotes`);

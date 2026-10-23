@@ -6,6 +6,8 @@ Exploratory (not pre-registered): how much do the scorers agree, between vs with
 between: Spearman over prompts of each scorer's per-prompt mean (do they agree on which prompts
          come out well?). within: per-prompt Spearman over the 8 candidates, bootstrap CI over
          prompts (do they agree on which candidate of a prompt is best? this is what selection needs).
+top_match: fraction of prompts where both scorers' best candidate is the same one (chance 1/8),
+         bootstrap CI over prompts.
 """
 import argparse, itertools, json
 from pathlib import Path
@@ -28,7 +30,8 @@ def main():
     for x, y in itertools.combinations(keys, 2):
         between = float(spearmanr([np.mean(get(r, x)) for r in recs], [np.mean(get(r, y)) for r in recs])[0])
         within = bootstrap_ci([spearmanr(get(r, x), get(r, y))[0] for r in recs])
-        out["pairs"][f"{x}~{y}"] = {"between": between, "within": within}
+        top = bootstrap_ci([float(np.argmax(get(r, x)) == np.argmax(get(r, y))) for r in recs])
+        out["pairs"][f"{x}~{y}"] = {"between": between, "within": within, "top_match": top}
         print(f"{x:>8} ~ {y:<8} between {between:+.2f}   within {within['mean']:+.2f} "
               f"[{within['lo']:+.2f}, {within['hi']:+.2f}] (n={within['n']})")
     Path(a.out).write_text(json.dumps(out, indent=1))
