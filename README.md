@@ -18,12 +18,13 @@ production best-of-N service.
 
 | Section | Interactive figure | Code |
 |---|---|---|
-| From waveform to tokens | Fig. 1: the delay pattern, step by step | [`torch/prune.py`](torch/prune.py) `undelay` |
+| From waveform to tokens | Fig. 1: three codebook layouts, and what each token can see | [`torch/prune.py`](torch/prune.py) `undelay` |
 | The generator | | [`torch/prune.py`](torch/prune.py) `generate`, `sample` |
 | Judging music | | [`torch/scorers.py`](torch/scorers.py), [`torch/agreement.py`](torch/agreement.py) |
-| Best-of-N and its cost | Fig. 3: what N buys, by judge and selector | [`torch/profile_decode.py`](torch/profile_decode.py) |
+| Best-of-N and its cost | Fig. 3 (and the lead figure): what N buys, by judge and selector, with bootstrap bands | [`torch/profile_decode.py`](torch/profile_decode.py) |
 | Early pruning | Fig. 5: prune any prompt yourself, with its audio | [`torch/prune.py`](torch/prune.py), [`torch/evaluate.py`](torch/evaluate.py) `simulate` |
-| Evaluating a pruner | Fig. 6: the leak, as a rank scatter | [`torch/frontier.py`](torch/frontier.py), [`torch/future.py`](torch/future.py) |
+| A map of inference-time search | | post only |
+| Evaluating a pruner | Fig. 6: the leak, as a rank scatter; Fig. 7: pruning scored on unheard audio | [`torch/frontier.py`](torch/frontier.py), [`torch/future.py`](torch/future.py) |
 | System design | | post only |
 | Humans in the loop | | [`torch/listen.py`](torch/listen.py), [`torch/bracket.py`](torch/bracket.py) |
 

@@ -22,7 +22,7 @@
     <rect x="752" y="108" width="8" height="22"/>
   </g>
   <g fill="#333">
-    <text x="80" y="38">CPU: Python + framework dispatch + ~300 kernel launches (each tick = many launches)</text>
+    <text x="80" y="38">CPU: Python + framework dispatch + ~500 kernel launches (each tick = many launches)</text>
     <text x="80" y="152">GPU: ~500 kernels, mean 13 µs; busy 6.5 ms, idle 12.2 ms waiting for the CPU</text>
   </g>
   <line x1="80" y1="170" x2="760" y2="170" stroke="#555"/>

@@ -2,7 +2,7 @@
 
 Formats the value from the results JSON the way the post prints it and asserts that exact
 string appears in the post. A changed result without an updated post fails CI."""
-import json
+import json, re
 from pathlib import Path
 import pytest
 
@@ -55,3 +55,12 @@ def expected():
 @pytest.mark.parametrize("literal", expected())
 def test_post_quotes_the_results(literal):
     assert literal in TEXT, f"post.md does not contain {literal!r} (from results/)"
+
+
+def test_timeline_figure_matches_the_profile():
+    """The schematic's text quotes the profiler: wall and busy ms at batch 1, kernels per step."""
+    svg = (ROOT / "post/figures/timeline.svg").read_text()
+    b1 = R("profile_decode_small_float16_pretrained_t4.json")["batches"]["1"]
+    k = f"~{round(b1['kernels_per_step'], -2):.0f} kernel"
+    assert f"{b1['wall_ms_per_step']:.1f} ms" in svg and f"busy {b1['gpu_busy_ms_per_step']:.1f} ms" in svg
+    assert svg.count(k) == 2 and len(re.findall(r"~\d+ kernel", svg)) == 2, "kernel counts must agree with the profile"

@@ -133,3 +133,12 @@ text.end { fill: var(--muted); stroke: none; } text.s-oracle { fill: var(--k2); 
 
 /* leak scatter */
 .pt { opacity: .55; } .pt.musiccaps { fill: var(--mc); } .pt.redteam { fill: var(--rt); }
+
+/* delay layouts: click a token to see its context */
+.pick { cursor: pointer; }
+.cell.ctx { stroke: var(--fg); stroke-width: 2; }
+.cell.blind { opacity: .3; }
+.cell.sel { stroke: var(--fg); stroke-width: 3.5; }
+/* best-of-N uncertainty bands */
+polyline.band { stroke: none; opacity: .18; }
+polyline.band.s-oracle { fill: var(--k2); } polyline.band.s-clap { fill: var(--k0); }

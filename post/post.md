@@ -14,6 +14,13 @@ description: How text-to-music models turn text into audio tokens, how machines 
 > interactive figures are not illustrations: they recompute the study's results from its data in your
 > browser, and a test checks that they match the committed numbers.
 
+:::figure bestofn compact=1
+**The result in one picture.** Eight takes of a prompt really do differ: a selector that knew what the 2026 reward
+model CMI-RM wants (green) would gain a lot over a random take. CLAP, the scorer this study prunes and selects
+with, recovers about a quarter of that (blue). Pruning can make CLAP's choice cheaper (§ Early pruning), but not
+better. The bottleneck is the judge. Interactive version, with other judges: Fig. 3.
+:::
+
 <!-- toc -->
 
 ## Introduction
@@ -95,12 +102,15 @@ exponential moving average. The random codebooks above only show the greedy resi
 
 Four tokens per frame raise a modelling question: predict them one after another (4 × 1500 = 6,000 steps), or all
 at once (1,500 steps, but codebook 2 cannot see codebook 1 of the same frame)? MusicGen's answer is the **delay
-pattern**: shift codebook $k$ right by $k-1$ steps, then predict all four codebooks in parallel at each step.
+pattern**: shift codebook $k$ right by $k-1$ steps, then predict all four codebooks in parallel at each step. It
+buys almost the speed of the parallel layout and almost the dependencies of the flat one, as the figure shows.
 
 :::figure delay fallback=figures/delay.svg
-**Fig. 1. The delay pattern, one step at a time.** Each column is a decoding step and each cell the token it writes;
-$t_f$ is the frame. Drag the slider or press play. Codebook $k$ runs $k-1$ frames behind codebook 1, so when it
-writes frame $t$ the coarser codebooks of that frame already exist. 1,500 frames take $1500 + 3 = 1{,}503$ steps.
+**Fig. 1. Three ways to lay out four codebooks.** Each column is a decoding step and each cell a token, labelled
+by its frame (t1, t2, …). Switch layouts and click any token: outlined cells are what it can condition on, dimmed
+cells are written in the same step and invisible to it. *Flatten* sees everything but needs 6,000 steps for 30 s;
+*parallel* needs 1,500 but codebook 2 is blind to codebook 1 of its own frame; *delay* needs $1500 + 3 = 1{,}503$
+steps and keeps that dependency, because codebook $k$ runs $k - 1$ frames behind.
 :::
 
 In the companion code this is a mask that writes padding in the triangles, and `undelay`, which reads frame $t$
@@ -132,6 +142,16 @@ cross-attention $4d^2$, FFN $2 \cdot d \cdot 4d = 8d^2$, so $16d^2 \approx 16.8\
 $\approx 403\text{M}$, plus embeddings and heads. Instantiating the configuration gives **420M decoder parameters,
 101M of them cross-attention** (derived from the config). The checkpoint is marketed as "300M"; the gap is a matter
 of what you count, and it matters when estimating memory traffic below.
+
+Training is ordinary next-token prediction, summed over the four codebooks. With $c_{s,k}$ the token of codebook
+$k$ at step $s$ of the delayed sequence, the loss is the cross-entropy
+
+$$
+\mathcal{L}(\theta) = -\sum_{s} \sum_{k=1}^{K} \log p_\theta\big(c_{s,k} \mid c_{<s},\, x\big),
+$$
+
+with padding positions masked out. Within a step the four codebooks are predicted independently given the past;
+the delay is what lets that factorisation still respect "coarse before fine" inside each frame.
 
 ### Conditioning on text and classifier-free guidance
 
@@ -169,6 +189,16 @@ def sample(logits, noise, top_k, temp):
     l = l.masked_fill(l < kth, -math.inf)                # restrict to the top-k set
     return (l + noise).argmax(dim=-1)                    # (B, K): one token per codebook
 ```
+
+Why is that exact? The Gumbel CDF is $F(g) = \exp(-e^{-g})$, so the probability that token $v$ wins is
+
+$$
+P(v) = \int e^{-(z-\ell_v)} \exp\!\big(-e^{-(z-\ell_v)}\big) \prod_{w \ne v} \exp\!\big(-e^{-(z-\ell_w)}\big)\, dz
+= e^{\ell_v} \int e^{-z} \exp\!\Big(-e^{-z} \sum_w e^{\ell_w}\Big)\, dz = \frac{e^{\ell_v}}{\sum_w e^{\ell_w}} ,
+$$
+
+taking $T = 1$ (divide the logits by $T$ otherwise); the last integral is $1/\sum_w e^{\ell_w}$ by the substitution
+$u = e^{-z}$. Masking to the top $k$ before adding noise samples from the renormalised top-$k$ softmax.
 
 Why bother, when `torch.multinomial` exists? Because it separates *the randomness* from *the model*: the noise
 can be generated separately and keyed however we like. Exact pruning depends on exactly this.
@@ -268,7 +298,8 @@ preference set plus a human-annotated one, with heads for musical quality and fo
 At the population level, the newest source of truth is human pairwise voting at scale:
 [Music Arena](https://arxiv.org/abs/2507.20900) (2025) runs live battles between text-to-music systems and
 publishes the votes. This is the LLM-evaluation era arriving in music: judges are themselves learned models, with
-biases, blind spots and noise, and **a judge must be validated before it is trusted**.
+biases, blind spots and noise, and **a judge must be validated before it is trusted**. In the notation above,
+each judge is one choice of $r(x, y)$; below, $r$ is named after the judge it stands for.
 
 ### Do judges agree?
 
@@ -304,16 +335,24 @@ $$
 \mathbb{E}\big[\max_{i \le N} r_i\big] \approx \mu + \sigma \sqrt{2 \ln N} \quad (\text{large } N).
 $$
 
-Treat this as intuition, not a law: real takes are not that tidy. But the shape is right. Gains per doubling
-shrink, which has been reported for music reward models too ([TuneJury](https://arxiv.org/abs/2606.17006), 2026),
-while cost grows linearly in $N$. We can check both the shape and something more important on our own data.
+Where does $\sqrt{2 \ln N}$ come from? For standard normal $Z$, the largest of $N$ draws sits roughly where only
+one draw in $N$ lands above it: $P(Z > m) \approx 1/N$. The tail is $P(Z > m) \approx \varphi(m)/m \propto e^{-m^2/2}/m$,
+so $m^2/2 \approx \ln N$ up to lower-order terms, and $m \approx \sqrt{2 \ln N}$.
+
+Treat this as intuition, not a law: real takes are not that tidy. But the shape holds up. TuneJury
+([Kim et al. 2026](https://arxiv.org/abs/2606.17006)) swept best-of-N with a music reward model on four generators
+(two MusicGen sizes among them), N from 1 to 32: reward rose with every doubling, but the gain per doubling fell
+from +0.18–0.29 (4 → 8) to +0.06–0.14 (16 → 32), in their reward's units. Cost, meanwhile, grows linearly in $N$.
+We can check the shape, and something more important, on our own data.
 
 :::figure bestofn
 **Fig. 3. What N buys, and who picks.** For each $N$, the average over MusicCaps prompts and over every subset of
 $N$ of the 8 takes of: the judge's score of the pick, minus the average take. *Oracle* picks with the judge
-itself; *CLAP* picks with CLAP and is graded by the judge. Switch judges. The oracle curve flattens as $\sqrt{\ln N}$
-suggests; the CLAP curve barely leaves zero, whichever judge grades it. At $N = 8$ these are exactly the Q2 numbers
-below.
+itself; *CLAP* picks with CLAP and is graded by the judge. Bands are 95% bootstrap intervals over prompts. Switch
+judges: CLAP's curve stays far below the oracle under every judge, and under MuQ-MuLan it is flat at zero. At
+$N = 8$ the points are exactly the Q2 numbers below. **Caveat:** subsets are drawn from a fixed pool of 8 takes, so
+at $N = 8$ the oracle is forced to equal the pool's maximum. Part of the flattening is the finite pool, not the
+distribution of takes, and these curves say nothing about $N > 8$.
 :::
 
 Fig. 3 is the whole economics of this post in one picture. The gap between the two curves is value that more
@@ -374,20 +413,62 @@ autoregressive decoding in eager mode is **launch-bound**. Two consequences carr
 At batch 1 the T4 runs about 1,503 steps × 18.1 ms ≈ 27 s for 30 s of audio, just inside real time (derived).
 Eight takes at once took 38.6 s: slower than real time.
 
+## A map of inference-time search
+
+Best-of-N is the bluntest way to turn compute into quality. Before narrowing to one refinement, it helps to see
+where it sits. The methods differ in *what* they score, *when*, and whether they need gradients.
+
+**Best-of-N and rejection.** Sample complete candidates, score, keep the best (or keep any above a threshold).
+Simple, parallel, and agnostic to the model: it only needs a scorer. The music reward models above report
+exactly this use: CMI-RewardBench uses its reward models for inference-time top-k filtering, and TuneJury for
+best-of-N selection.
+
+**Early rejection.** Score *partial* candidates and stop the weak ones: successive halving from hyperparameter
+search ([Hyperband](https://arxiv.org/abs/1603.06560); Li et al. 2016), applied to LLM best-of-N as
+[Speculative Rejection](https://arxiv.org/abs/2410.20290) (Sun et al. 2024), and to diffusion seeds as
+[Progressive Seed Pruning](https://www.vision.caltech.edu/psp). It keeps best-of-N's output distribution if the
+early score ranks takes like the final one, which is exactly what has to be checked. This post's method lives here.
+
+**Guided search over partial sequences.** Instead of only dropping candidates, *reallocate* compute to promising
+ones: beam search against a process reward model, or sequential Monte Carlo, which resamples a population of
+partial sequences by an estimate of their future value. Twisted SMC ([Zhao et al. 2024](https://arxiv.org/abs/2404.17546))
+learns that estimate (the "twist") so that resampling targets the reward-tilted distribution. These need a scorer
+that is meaningful on prefixes, the same requirement early rejection has, plus a way to duplicate candidates
+(cheap for a KV cache: copy the rows).
+
+**Optimising the noise.** For diffusion models, the initial noise is a continuous input that can be optimised.
+DITTO ([Novack et al. 2024](https://arxiv.org/abs/2401.12179)) backpropagates a differentiable loss on the output
+through the sampler to the starting noise, steering a frozen text-to-music model without fine-tuning. It needs a
+differentiable objective and many backward passes, and buys control that selection cannot.
+
+**Allocating compute per prompt.** Easy prompts need one sample; hard ones benefit from search.
+[Snell et al. 2024](https://arxiv.org/abs/2408.03314) show for LLMs that choosing the strategy per prompt by
+estimated difficulty beats a fixed best-of-N by more than 4× in compute efficiency. The music analogue (spend
+$N$ where the takes disagree most) is open.
+
+| Family | Scores | When | Needs | Changes the output distribution? |
+|---|---|---|---|---|
+| Best-of-N / rejection | full takes | at the end | a scorer | yes, toward the scorer |
+| Early rejection | prefixes | at checkpoints | a prefix-meaningful scorer | only where early and final ranks disagree |
+| Guided search (beam, SMC) | prefixes | every step or chunk | prefix scorer, candidate copying | yes, by reallocating |
+| Noise optimisation (DITTO) | full outputs | many iterations | a differentiable objective | yes, by steering |
+| Per-prompt allocation | difficulty estimate | before generating | a difficulty predictor | no, it only sets N |
+
+The thread through every row is the scorer. Search can only amplify what the scorer can see, which is why this
+post spends as long on judges as on algorithms.
+
 ## Early pruning
 
 ### Successive halving
 
-The idea is borrowed from hyperparameter search ([Hyperband](https://arxiv.org/abs/1603.06560); Li et al. 2016)
-and was applied to LLM best-of-N as [Speculative Rejection](https://arxiv.org/abs/2410.20290) (Sun et al. 2024):
-run every candidate a little, score them, keep the best fraction, repeat. With checkpoints $t_1 < t_2 < \dots$,
+From the map above, early rejection: run every candidate a little, score them, keep the best fraction, repeat. With checkpoints $t_1 < t_2 < \dots$,
 $n_j$ takes alive after checkpoint $j$ and horizon $H$, the fraction of compute spent relative to full best-of-N is
 
 $$
-\frac{C}{C_0} = \frac{1}{N H} \sum_j n_j \,(t_{j+1} - t_j), \qquad n_{j+1} = \lceil f \cdot n_j \rceil ,
+\frac{C}{C_0} = \frac{1}{N H} \sum_j n_j \,(t_{j+1} - t_j), \qquad n_{j+1} = \lceil \kappa \, n_j \rceil ,
 $$
 
-for keep fraction $f$. With checkpoints at 10 s and 20 s and $f = 0.5$: $(8 \cdot 10 + 4 \cdot 10 + 2 \cdot 10) / 240 = 0.583$.
+for keep fraction $\kappa$. With checkpoints at 10 s and 20 s and $\kappa = 0.5$: $(8 \cdot 10 + 4 \cdot 10 + 2 \cdot 10) / 240 = 0.583$.
 The schedule logic is a few lines, and keeping it a pure function is what lets us evaluate it offline:
 
 ```python
@@ -416,7 +497,8 @@ prefix). At each dashed checkpoint the lowest-scoring takes are cut (×); their 
 would never be generated. ● is the pruned run's pick and ◎ the take it should have kept. Press a take to hear it;
 the playhead shows where you are. **Try:** on "orchestral build-up", take D survives the 10 s checkpoint but is cut at
 20 s by keep-half, yet it is what unpruned best-of-8 picks; keep 0.65 saves it. Then set the first checkpoint to 5 s and
-watch the slow-build success rate collapse. The bottom line recomputes the schedule over all 50 prompts.
+watch the slow-build success rate collapse. The bottom line recomputes the schedule over all 50 prompts; schedules
+with a first checkpoint at 15 s or 20 s are outside the committed results and labelled as exploration.
 :::
 
 ### Making pruning exact
@@ -535,8 +617,15 @@ its 10 s score (x) and by a target (y). Against the chunk the 10 s score has hea
 To measure prediction, the target must be something the pruner has not heard. I pre-registered (wrote down,
 committed, *then* computed) this check: score every take's three 10 s chunks separately, define the target as the
 take CLAP likes best on the **last** chunk (20–30 s), and ask how often pruning keeps it alive, against chance
-$k/8$ for $k$ survivors. In Fig. 5, switch "Score against" to *best on unheard 20–30 s* to run the same check
-(`results/future_only.json`):
+$k/8$ for $k$ survivors (`results/future_only.json`). Fig. 7 runs the same check, prompt by prompt:
+
+:::figure pruner prompt=rt_08 target=future
+**Fig. 7. Pruning, scored against audio it has not heard.** Fig. 5 again, but ◎ now marks the take CLAP likes
+best on the last 10 s (shaded), and the bottom line reports how often that take survives against chance. On "lone
+piano ballad intro", unpruned best-of-8's pick survives keep-half (Q1 is satisfied) while the take with the best
+ending is cut at the first checkpoint. Switch back to the 30 s pick to compare, or move the first checkpoint past
+20 s: the check becomes untestable, because pruning has heard the target.
+:::
 
 | Schedule | MusicCaps: kept vs chance | Excess [95% CI] | Red-team excess |
 |---|---|---|---|
@@ -545,9 +634,9 @@ $k/8$ for $k$ survivors. In Fig. 5, switch "Score against" to *best on unheard 2
 | 10 s / 0.75 | 0.93 vs 0.62 | +0.30 [+0.20, +0.38] | +0.17 [−0.12, +0.38] |
 
 The early signal is real on MusicCaps. Measured cleanly, though, the 10 s score correlates with the unheard
-10–30 s at $\rho = +0.44$, not $+0.99$, and on slow-build prompts at only +0.25 [−0.01, +0.48].^[In Fig. 5, try
-"lone piano ballad intro" with the leak-free target: Q1 is satisfied, but the take with the best final 10 s is cut
-at the first checkpoint.] Two lessons generalise far beyond music:
+10–30 s at $\rho = +0.44$, not $+0.99$, and on slow-build prompts at only +0.25 [−0.01, +0.48].^[Slow builds are
+where the overlap flatters most: the 10 s score agrees with the first chunk almost perfectly, yet the music that
+decides the take arrives later.] Two lessons generalise far beyond music:
 
 - **Whenever a predictor is a component of its target, your metric is partly measuring the overlap.** Define
   targets on data the predictor has not seen.
@@ -569,7 +658,7 @@ at the first checkpoint.] Two lessons generalise far beyond music:
 Now take the pieces to production. The service receives a prompt and returns one song; behind the API it runs
 best-of-N with pruning.
 
-![Service architecture](figures/system.svg "**Fig. 7. A best-of-N music service.** The generator's decode loop shares GPUs through continuous batching; a checkpoint scorer decides what to drop; a different model picks the keeper; an offline loop replays logged corpora to evaluate new scorers and schedules exactly.")
+![Service architecture](figures/system.svg "**Fig. 8. A best-of-N music service.** The generator's decode loop shares GPUs through continuous batching; a checkpoint scorer decides what to drop; a different model picks the keeper; an offline loop replays logged corpora to evaluate new scorers and schedules exactly.")
 
 ### Requirements and budget
 
@@ -608,7 +697,7 @@ take here is normalised to −16 LUFS with one linear gain, so crescendos keep t
 
 **Offline loop.** Log prompts, tokens and scores. Because noise is row-keyed, any logged request can be replayed
 under a new schedule or scorer *exactly*, which makes A/B decisions cheap and safe before anything reaches users.
-Fig. 5 is a tiny version of this loop.
+Figs. 5 and 7 are a tiny version of this loop.
 
 ### The real-time variant
 
@@ -670,7 +759,7 @@ repo has such a blind A/B test (`torch/listen.py`); it has not been run yet, so 
    Look up the configuration of a larger MusicGen checkpoint and compute how many 30 s takes with CFG fit in
    16 GB alongside the weights.
 3. **Schedules.** Derive the compute fraction of a schedule with first checkpoint $t_1$, a checkpoint every $t_1$
-   seconds and keep fraction $f$. Check your formula against Fig. 5 for 15 s and 20 s.
+   seconds and keep fraction $\kappa$. Check your formula against Fig. 5 for 15 s and 20 s.
 4. **Exactness.** Run `python torch/prune.py`. Then change `row_keyed=True` to `False` in the pruned call and
    explain the token-match number you get.
 5. **Brackets.** In a random single-elimination bracket of 8, what is the probability that the second-best take
@@ -700,7 +789,7 @@ Cited as:
 > r03922123. (Oct 2026). Best-of-N for text-to-music: sampling, judging and pruning under a compute budget.
 > https://r03922123.github.io/musicgen-prune-inference/
 
-```bash
+```text
 @article{r03922123_2026_bestofn_music,
   title   = "Best-of-N for text-to-music: sampling, judging and pruning under a compute budget",
   author  = "r03922123",
@@ -714,7 +803,7 @@ Cited as:
 ## References
 
 1. van den Oord et al. ["WaveNet: A generative model for raw audio."](https://arxiv.org/abs/1609.03499) arXiv 2016.
-2. Zeghidour et al. ["SoundStream: An end-to-end neural audio codec."](https://arxiv.org/abs/2107.03312) IEEE TASLP 2021.
+2. Zeghidour et al. ["SoundStream: An end-to-end neural audio codec."](https://arxiv.org/abs/2107.03312) IEEE/ACM TASLP 2022.
 3. Défossez et al. ["High fidelity neural audio compression."](https://arxiv.org/abs/2210.13438) TMLR 2023 (EnCodec).
 4. Copet et al. ["Simple and controllable music generation."](https://arxiv.org/abs/2306.05284) NeurIPS 2023 (MusicGen).
 5. Ho & Salimans. ["Classifier-free diffusion guidance."](https://arxiv.org/abs/2207.12598) arXiv 2022.
@@ -724,16 +813,19 @@ Cited as:
 9. Stability AI and Arm. ["Stable Audio Open Small."](https://stability.ai/news/stability-ai-and-arm-release-stable-audio-open-small-enabling-real-world-deployment-for-on-device-audio-control) 2025.
 10. Google Magenta. ["Magenta RealTime" model card.](https://huggingface.co/google/magenta-realtime) 2025.
 11. Progressive Seed Pruning (Caltech). [Project page.](https://www.vision.caltech.edu/psp) 2026.
-12. Kilgour et al. ["Fréchet Audio Distance: A metric for evaluating music enhancement algorithms."](https://arxiv.org/abs/1812.08466) arXiv 2018.
+12. Kilgour et al. ["Fréchet Audio Distance: A reference-free metric for evaluating music enhancement algorithms."](https://arxiv.org/abs/1812.08466) arXiv 2018.
 13. Wu et al. ["Large-scale contrastive language-audio pretraining with feature fusion and keyword-to-caption augmentation."](https://arxiv.org/abs/2211.06687) ICASSP 2023 (CLAP).
 14. Tjandra et al. ["Meta Audiobox Aesthetics: Unified automatic quality assessment for speech, music, and sound."](https://arxiv.org/abs/2502.05139) arXiv 2025.
-15. ["CMI-RewardBench"](https://arxiv.org/abs/2603.00610) (CMI-RM). ICML 2026.
-16. ["MuQ: Self-supervised music representation learning"](https://arxiv.org/abs/2501.01108) (MuQ-MuLan). arXiv 2025.
-17. ["Music Arena: Live evaluation for text-to-music."](https://arxiv.org/abs/2507.20900) arXiv 2025.
-18. ["TuneJury"](https://arxiv.org/abs/2606.17006). arXiv 2026.
+15. Ma et al. ["CMI-RewardBench: Evaluating music reward models with compositional multimodal instruction."](https://arxiv.org/abs/2603.00610) ICML 2026 (CMI-RM).
+16. Zhu et al. ["MuQ: Self-supervised music representation learning with mel residual vector quantization."](https://arxiv.org/abs/2501.01108) arXiv 2025 (MuQ-MuLan).
+17. Kim et al. ["Music Arena: Live evaluation for text-to-music."](https://arxiv.org/abs/2507.20900) arXiv 2025.
+18. Kim et al. ["TuneJury: An open metric for improving music generation preference alignment."](https://arxiv.org/abs/2606.17006) arXiv 2026.
 19. Li et al. ["Hyperband: A novel bandit-based approach to hyperparameter optimization."](https://arxiv.org/abs/1603.06560) JMLR 2018.
 20. Sun et al. ["Fast best-of-N decoding via speculative rejection."](https://arxiv.org/abs/2410.20290) NeurIPS 2024.
 21. Kwon et al. ["Efficient memory management for large language model serving with PagedAttention."](https://arxiv.org/abs/2309.06180) SOSP 2023 (vLLM).
-22. Rafailov et al. ["Direct preference optimization: Your language model is secretly a reward model."](https://arxiv.org/abs/2305.18290) NeurIPS 2023.
-23. Olah & Carter. ["Research debt."](https://distill.pub/2017/research-debt/) Distill 2017. The reason this post has interactive figures.
-24. Karpathy. ["A recipe for training neural networks."](https://karpathy.github.io/2019/04/25/recipe/) 2019. The "become one with the data, then measure" attitude this post tries to follow.
+22. Zhao et al. ["Probabilistic inference in language models via twisted sequential Monte Carlo."](https://arxiv.org/abs/2404.17546) arXiv 2024.
+23. Novack et al. ["DITTO: Diffusion inference-time T-optimization for music generation."](https://arxiv.org/abs/2401.12179) ICML 2024.
+24. Snell et al. ["Scaling LLM test-time compute optimally can be more effective than scaling model parameters."](https://arxiv.org/abs/2408.03314) arXiv 2024.
+25. Rafailov et al. ["Direct preference optimization: Your language model is secretly a reward model."](https://arxiv.org/abs/2305.18290) NeurIPS 2023.
+26. Olah & Carter. ["Research debt."](https://distill.pub/2017/research-debt/) Distill 2017. The reason this post has interactive figures.
+27. Karpathy. ["A recipe for training neural networks."](https://karpathy.github.io/2019/04/25/recipe/) 2019. The "become one with the data, then measure" attitude this post tries to follow.
