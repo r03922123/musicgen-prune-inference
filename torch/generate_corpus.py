@@ -1,5 +1,5 @@
 """
-Unpruned best-of-N corpus (SPEC 0.5): every schedule is later evaluated offline from it.
+Unpruned best-of-N corpus: every schedule is later evaluated offline from it.
 
   python torch/generate_corpus.py --out corpus                 # all 50 prompts, 30 s, N=8
   python torch/generate_corpus.py --out c --limit 1 --seconds 6 --judges none   # local check

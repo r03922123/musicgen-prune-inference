@@ -21,8 +21,8 @@ a leak found in its own metric.
 | Best-of-N and its judges | Fig. 3: pick with CLAP, grade with someone else | [`torch/scorers.py`](torch/scorers.py), [`torch/agreement.py`](torch/agreement.py) |
 | What decoding costs | | [`torch/profile_decode.py`](torch/profile_decode.py) |
 | Early pruning | Fig. 5: prune any prompt, with audio | [`torch/evaluate.py`](torch/evaluate.py) `simulate` |
-| Evaluating a pruner | Figs. 6–7: the leak, and the leak-free check | [`torch/frontier.py`](torch/frontier.py), [`torch/future.py`](torch/future.py) |
-| Humans | | [`torch/listen.py`](torch/listen.py), [`torch/bracket.py`](torch/bracket.py) |
+| Evaluating a pruner | Fig. 6: the leak in the metric | [`torch/frontier.py`](torch/frontier.py), [`torch/future.py`](torch/future.py) |
+| Humans | | [`torch/listen.py`](torch/listen.py) (pairwise A/B test, not yet run) |
 
 The figures are not drawings: [`post/js/sim.js`](post/js/sim.js) is `torch/evaluate.py` ported to JavaScript, run
 on [`post/data.json`](post/data.json) in the reader's browser, and [`post/tests/sim.test.mjs`](post/tests/sim.test.mjs)

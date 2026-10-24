@@ -1,5 +1,5 @@
 """
-Build the 2-day prompt set (SPEC 0.5): 40 MusicCaps captions + 10 slow-build red-team prompts.
+Build the prompt set: 40 MusicCaps captions + 10 slow-build red-team prompts.
 
   python torch/make_prompts.py     # rewrites data/prompts/*.tsv byte-for-byte
 

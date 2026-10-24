@@ -198,3 +198,14 @@ Exploratory reference: clap10 vs chunk-1 within-prompt Spearman +0.99, confirmin
 - The within/across-prompt Spearman explanation and its rank chart (added earlier today) are removed from the post:
   a homemade diagnostic that readers new to evaluation found hard to follow. `torch/agreement.py` and
   `results/judge_agreement.json` are unchanged and still back the quoted numbers. No result changed.
+
+## 2026-10-24: editorial pass, mainstream practice only, 18-minute read
+
+- Reviewed against Karpathy, Lil'Log, Distill and CS231n conventions; kept only standard practice, each named and
+  cited: successive halving (Jamieson & Talwalkar 2016), reward hacking with proxy vs gold judges (Gao et al.
+  2023), target leakage, pre-registration, pairwise preference with Bradley-Terry (Chatbot Arena), continuous
+  batching, paged KV cache and CUDA graphs.
+- Removed the homemade bracket analysis (`torch/bracket.py`, `results/bracket.json`, the bracket functions in
+  `torch/evaluate.py` and their tests) and the second, leak-free copy of the pruning figure; the leak-free table
+  stays, still checked against `results/future_only.json`. No result changed.
+- The post went from 28 to 18 minutes (220 words per minute, references included).

@@ -1,5 +1,5 @@
 """
-Blind A/B listening test (SPEC 0.5 Day 2, Q2 human check), macOS (plays with afplay).
+Blind A/B listening test (the human check of Q2), macOS (plays with afplay).
 
   uv run python torch/listen.py                 # 20 trials, resumes from results/listening.csv
   uv run python torch/listen.py --analyse       # binomial test on the CSV only

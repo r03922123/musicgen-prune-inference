@@ -153,7 +153,7 @@ function bestofn(root, data, opts = {}) {
 // Fig: successive halving on one prompt, with its audio; and the same schedule over all prompts.
 function pruner(root, data, opts = {}) {
   const byId = Object.fromEntries(data.prompts.map((p) => [p.id, p]));
-  const st = { id: opts.prompt || data.prompts[0].id, first: 10, keep: 0.5, target: opts.target || "q1" };
+  const st = { id: opts.prompt || data.prompts[0].id, first: 10, keep: 0.5 };
   const id = uid();
   const ctl = el("div", { class: "controls" }, root);
   const pl = el("label", { class: "ctl-prompt", text: "Prompt " }, ctl);
@@ -166,7 +166,6 @@ function pruner(root, data, opts = {}) {
   sel.addEventListener("change", () => { st.id = sel.value; stop(); draw(); });
   radios(ctl, `${id}-first`, "First checkpoint", [[5, "5 s"], [10, "10 s"], [15, "15 s"], [20, "20 s"]], st.first, (v) => { st.first = v; draw(); });
   radios(ctl, `${id}-keep`, "Keep at each", [[0.5, "half"], [0.65, "0.65"], [0.75, "0.75"]], st.keep, (v) => { st.keep = v; draw(); });
-  if (opts.target) radios(ctl, `${id}-target`, "Score against", [["q1", "unpruned 30 s CLAP pick"], ["future", "best on unheard 20–30 s"]], st.target, (v) => { st.target = v; draw(); });
   const caption = el("p", { class: "prompt-caption" }, root);
   const host = el("div", {}, root);
   const takes = el("div", { class: "takes", role: "group", "aria-label": "play takes" }, root);
@@ -180,7 +179,7 @@ function pruner(root, data, opts = {}) {
 
   const draw = () => {
     const p = byId[st.id], r = prune(p, st.first, st.keep);
-    const goal = st.target === "q1" ? r.base : r.target;
+    const goal = r.base;
     caption.textContent = `“${p.caption}”`;
     const cutAt = Array(p.n).fill(null);
     for (const [t, alive] of Object.entries(r.alive)) for (let i = 0; i < p.n; i++) if (cutAt[i] === null && !alive.includes(i)) cutAt[i] = +t;
@@ -197,7 +196,6 @@ function pruner(root, data, opts = {}) {
       el("line", { x1: ax.sx(t), x2: ax.sx(t), y1: 28, y2: H - 40, class: "cp" }, svg);
       el("text", { x: ax.sx(t) + 4, y: 42, class: "cp-t", text: `keep ${r.alive[t].length}` }, svg);
     }
-    if (st.target === "future") el("rect", { x: ax.sx(20), y: 28, width: ax.sx(30) - ax.sx(20), height: H - 68, class: "unheard" }, svg);
     // end labels: keep at least 12 px apart so close finishers stay readable
     const labelY = Array(p.n), order = [...Array(p.n).keys()].sort((a, b) => ax.sy(p.clap[30][a]) - ax.sy(p.clap[30][b]));
     order.forEach((i, j) => { const y = ax.sy(p.clap[30][i]); labelY[i] = j ? Math.max(y, labelY[order[j - 1]] + 12) : y; });
@@ -228,16 +226,14 @@ function pruner(root, data, opts = {}) {
         head.style.display = ""; tick();
       });
     }
-    const goalName = st.target === "q1" ? "the take unpruned best-of-8 picks" : "the take CLAP likes best on the last 10 s";
+    const goalName = "the take unpruned best-of-8 picks";
     mine.innerHTML = `This prompt: ${r.survivors.length} of 8 takes reach 30 s, compute <b>${r.compute.toFixed(3)}</b> of full best-of-8. ` +
       (r.survivors.includes(goal) ? `◎ ${goalName} (${TAKES[goal]}) <b>survives</b>.` : `◎ ${goalName} (${TAKES[goal]}) is <b>cut at ${cutAt[goal]} s</b>.`);
     const inResults = [5, 10].includes(st.first) ? "" : " (not in the committed results: explore freely)";
     const line = (set, label) => {
       const s = schedule(data.prompts.filter((q) => q.set === set), st.first, st.keep);
       // two decimals, formatted like the post's tables, so figure and table always read the same
-      if (st.target === "q1") return `${label} (n = ${s.n}): same winner <b>${s.sameWinner.toFixed(2)}</b>`;
-      if (!s.testable) return `${label}: not testable, a checkpoint after 20 s has heard the target`;
-      return `${label} (n = ${s.n}): target kept <b>${s.kept.toFixed(2)}</b> vs ${s.chance.toFixed(2)} by chance`;
+      return `${label} (n = ${s.n}): same winner <b>${s.sameWinner.toFixed(2)}</b>`;
     };
     all.innerHTML = `All prompts, this schedule${inResults}: ${line("musiccaps", "MusicCaps")}; ${line("redteam", "slow builds")}.`;
   };

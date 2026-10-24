@@ -22,7 +22,7 @@ def ci(m, d=2, signed=False):
 
 
 def expected():
-    fr, fu, br, ag = R("frontier.json"), R("future_only.json"), R("bracket.json"), R("judge_agreement.json")
+    fr, fu, ag = R("frontier.json"), R("future_only.json"), R("judge_agreement.json")
     pr = R("profile_decode_small_float16_pretrained_t4.json")["batches"]
     sched = {(x["first"], x["keep"]): x for x in fr["schedules"]}
     out = []
@@ -46,7 +46,6 @@ def expected():
             ci(p["redteam"]["clap10_vs_chunks23"], signed=True), s(p["musiccaps"]["clap10_vs_chunk1"]["mean"])]
     out += [ci(ag["pairs"][k]["top_match"]) for k in ("clap~mulan", "clap~cmi_qual")]
     out += [s(ag["pairs"]["clap~mulan"]["between"]), f"{ag['pairs']['clap~cmi_qual']['top_match']['mean']:.0%} of prompts"]
-    out += [ci(br["judges"]["cmi_qual"]["musiccaps"]["same_as_unpruned"])]
     b1, b8 = pr["1"], pr["8"]
     out += [f"| 1 (2) | {b1['wall_ms_per_step']:.1f} | {b1['gpu_busy_ms_per_step']:.1f} | {b1['gpu_share_of_wall']:.0%} | {b1['kernels_per_step']:.0f} |",
             f"| 8 (16) | {b8['wall_ms_per_step']:.1f} | {b8['gpu_busy_ms_per_step']:.1f} | {b8['gpu_share_of_wall']:.0%} | {b8['kernels_per_step']:.0f} |"]

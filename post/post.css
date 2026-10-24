@@ -114,7 +114,6 @@ text.end { fill: var(--muted); stroke: none; } text.s-oracle { fill: var(--k2); 
 /* pruner */
 .cp { stroke: var(--muted); stroke-dasharray: 4 4; }
 .cp-t { fill: var(--muted); font-size: 11px; }
-.unheard { fill: var(--hl); opacity: .7; }
 .take .live { fill: none; stroke-width: 2.2; }
 .take .ghost { fill: none; stroke-width: 1.5; stroke-dasharray: 3 4; opacity: .35; }
 .take .x { font-size: 18px; font-weight: 700; }

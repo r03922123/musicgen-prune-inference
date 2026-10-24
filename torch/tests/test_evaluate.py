@@ -127,34 +127,6 @@ def test_selection_constant_pruner_picks_row_0_and_spearman_is_nan():
     assert m["spearman"] != m["spearman"]                     # constant input: NaN, dropped by bootstrap
 
 
-# Bracket (single elimination) vs top-k successive halving. Toy, 4 rows, one checkpoint:
-#   early [.4, .3, .2, .1], final [.1, .2, .9, .3]; the 3 distinct brackets
-#   (0-1, 2-3) -> 0, 2 -> final 2 | (0-2, 1-3) -> 0, 1 -> final 1 | (0-3, 1-2) -> 0, 1 -> 1
-#   top-k keep 0.5 keeps {0, 1} -> winner 1; unpruned pick = argmax final = 2.
-#   judge [1, 2, 3, 4]: regret vs the unpruned pick (3) = 0, 1, 1.
-def test_all_brackets_counts():
-    from evaluate import all_brackets
-    assert len(all_brackets(2)) == 1 and len(all_brackets(4)) == 3 and len(all_brackets(8)) == 315
-    assert all(sorted(b) == list(range(8)) for b in all_brackets(8))
-
-
-def test_bracket_champion_pairs_adjacent_and_ties_keep_lower_row():
-    from evaluate import bracket_champion
-    assert bracket_champion((0, 1, 2, 3), [[.4, .3, .2, .1], [.1, .2, .9, .3]]) == 2
-    assert bracket_champion((0, 3, 1, 2), [[.4, .3, .2, .1], [.1, .2, .9, .3]]) == 1
-    assert bracket_champion((3, 2), [[.5, .5, .5, .5]]) == 2
-
-
-def test_toy_bracket_metrics():
-    from evaluate import bracket_metrics
-    m = bracket_metrics({10: [.4, .3, .2, .1]}, [.1, .2, .9, .3], [1, 2, 3, 4], [10])
-    assert m["brackets"] == 3
-    assert m["same_as_unpruned"] == pytest.approx(1 / 3)
-    assert m["same_as_topk"] == pytest.approx(2 / 3)
-    assert m["regret"] == pytest.approx(2 / 3)
-    assert m["topk_regret"] == pytest.approx(1.0)
-
-
 # C1 future-only check (tasks/decisions.md, 2026-10-23). Toy, 4 takes, early CLAP identical at
 # 10 s and 20 s: [.4, .3, .2, .1]; chunk-3 (20-30 s) cosines [.1, .2, .9, .3] -> F = take 2.
 #   keep 0.5 , cps [10, 20]: alive {10: [0, 1], 20: [0]} -> F cut at 10 s; k = 1, chance 1/4

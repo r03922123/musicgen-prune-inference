@@ -1,6 +1,6 @@
 """
 Where does a decode step's time go? torch.profiler over 50 decode steps at batch 1 and 8
-(SPEC 0.5 Day 2). Tests the hypothesis that the ~18 ms/step floor seen on the T4 at batch <= 4
+Tests the hypothesis that the ~18 ms/step floor seen on the T4 at batch <= 4
 (results_steps_torch_small_float16_pretrained_t4.json) is CPU-side launch overhead, not GPU work.
 
   python torch/profile_decode.py                 # real musicgen-small, fp16, CUDA

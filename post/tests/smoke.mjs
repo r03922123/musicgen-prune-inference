@@ -34,7 +34,7 @@ for (const [name, width] of [["desktop", 1366], ["mobile", 390]]) {
   if (!r.katex || r.katexErrors || r.rawDollars) errors.push(`${name}: math katex=${r.katex} errors=${r.katexErrors} unrendered=${r.rawDollars}`);
   if (r.brokenImages.length) errors.push(`${name}: broken images ${r.brokenImages}`);
   if (r.hscroll) errors.push(`${name}: horizontal scroll`);
-  if (r.live.length !== 6 || r.live.some(([, ok]) => !ok)) errors.push(`${name}: interactive figures ${JSON.stringify(r.live)}`);
+  if (r.live.length !== 5 || r.live.some(([, ok]) => !ok)) errors.push(`${name}: interactive figures ${JSON.stringify(r.live)}`);
   if (r.sidenotes < 3) errors.push(`${name}: sidenotes ${r.sidenotes}`);
 
   // The pruning figure responds to its controls and recomputes over all prompts.
@@ -43,12 +43,6 @@ for (const [name, width] of [["desktop", 1366], ["mobile", 390]]) {
   await fig.locator('input[name$="-first"][value="5"]').check();
   const after = await fig.locator(".readout").last().textContent();
   if (before === after || !/same winner 0\.30/.test(after)) errors.push(`${name}: pruner readout did not update: ${after}`);
-  if (await fig.locator('input[name$="-target"]').count()) errors.push(`${name}: Fig. 5 should not offer the target toggle`);
-  // Fig. 7: the leak-free target, and its testability rule.
-  const fig7 = page.locator('figure[data-fig="pruner"]').nth(1);
-  if (!/target kept 0\.72 vs 0\.25 by chance/.test(await fig7.locator(".readout").last().textContent())) errors.push(`${name}: Fig. 7 kept rate`);
-  await fig7.locator('input[name$="-first"][value="15"]').check();
-  if (!/kept/.test(await fig7.locator(".readout").last().textContent())) errors.push(`${name}: Fig. 7 at 15 s should be testable`);
   // Fig. 1: switching layout changes the step count.
   const d = page.locator('figure[data-fig="delay"]');
   await d.locator('input[value="flatten"]').check();
@@ -63,7 +57,7 @@ for (const [name, width] of [["desktop", 1366], ["mobile", 390]]) {
     await fig.scrollIntoViewIfNeeded();
     await fig.screenshot({ path: `${shots}/pruner-${name}.png` });
     await page.screenshot({ path: `${shots}/top-${name}.png` });
-    for (const [i, f] of [[0, "delay"], [1, "bestofn"], [0, "leak"], [1, "pruner"]])
+    for (const [i, f] of [[0, "delay"], [1, "bestofn"], [0, "leak"], [0, "pruner"]])
       await page.locator(`figure[data-fig="${f}"]`).nth(i).screenshot({ path: `${shots}/${f}${i}-${name}.png` });
   }
   console.log(`${name}: ${r.h2} sections, ${r.katex} formulas, ${r.live.length} interactive figures, ${r.sidenotes} sidenotes`);

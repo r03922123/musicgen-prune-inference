@@ -1,5 +1,5 @@
 """
-Pruning schedules evaluated offline from the unpruned corpus (SPEC 0.5; Q1/Q2 split in
+Pruning schedules evaluated offline from the unpruned corpus (Q1/Q2 split in
 tasks/decisions.md, 2026-10-18).
 
   python torch/frontier.py --corpus data/corpus --out results
