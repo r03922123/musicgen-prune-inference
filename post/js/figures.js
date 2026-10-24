@@ -166,7 +166,7 @@ function pruner(root, data, opts = {}) {
       b.addEventListener("click", () => {
         if (playing === i) return stop();
         stop(); playing = i; b.classList.add("on");
-        audio.src = `audio/${p.id}_${i}.mp3`; audio.play().catch(() => {});
+        audio.src = new URL(`../audio/${p.id}_${i}.mp3`, import.meta.url).href; audio.play().catch(() => {});
         head.style.display = ""; tick();
       });
     }
@@ -187,7 +187,7 @@ function pruner(root, data, opts = {}) {
 const FIGS = { delay, pruner };
 const nodes = [...document.querySelectorAll("figure.explorable")];
 if (nodes.length) {
-  fetch("data.json").then((r) => r.json()).then((data) => {
+  fetch(new URL("../data.json", import.meta.url)).then((r) => r.json()).then((data) => {
     for (const f of nodes) {
       const body = f.querySelector(".fig-body");
       body.replaceChildren();

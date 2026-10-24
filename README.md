@@ -1,28 +1,29 @@
 # musicgen-prune-inference
 
-**Faster best-of-N for text-to-music: pruning weak takes early.**
-A post with interactive figures, and the complete code and data behind every number in it.
+Two posts with interactive figures, and the complete code and data behind every number in them.
 
-- **Read the post:** [r03922123.github.io/musicgen-prune-inference](https://r03922123.github.io/musicgen-prune-inference/)
-  (source: [`post/post.md`](post/post.md))
-- **Every analysis decision, dated:** [`tasks/decisions.md`](tasks/decisions.md)
+1. **[Judging text-to-music: CLAP best-of-N, then and now](https://r03922123.github.io/musicgen-prune-inference/)**
+   ([`post/post.md`](post/post.md), 10 min). How generated music is judged (FID and CLIP score → FAD and CLAP →
+   learned judges), why picking the best of N takes by CLAP is legitimate, and four extensions. One is measured:
+   pruning weak takes early keeps CLAP's pick on 97% of prompts at 0.75 of the compute.
+2. **[Inside MusicGen decoding: tokens, guidance and exact pruning](https://r03922123.github.io/musicgen-prune-inference/decoding/)**
+   ([`post/decoding.md`](post/decoding.md), 8 min). RVQ and the delay pattern, guidance and Gumbel-max sampling,
+   where a decoding step's time goes on a T4, pruning a running batch without changing the survivors, and the design
+   of a best-of-N service.
 
-Best-of-N reranking (generate N takes, keep the one CLAP scores highest, as DALL·E did with CLIP and AudioLDM with
-CLAP) costs N times one take. The post traces where the recipe comes from, builds MusicGen from the waveform up,
-measures where decoding time goes, and stops weak takes early with successive halving, exactly: same pick on 97% of
-prompts at 0.75 of the compute.
+Every analysis decision, dated: [`tasks/decisions.md`](tasks/decisions.md).
 
-## Where each part of the post lives
+## Where each part lives
 
-| Post section | Interactive figure | Code |
+| Post, section | Interactive figure | Code |
 |---|---|---|
-| From waveform to tokens | Fig. 1: codebook layouts | [`torch/prune.py`](torch/prune.py) `undelay` |
-| The generator | | [`torch/prune.py`](torch/prune.py) `generate`, `sample` |
-| Best-of-N: where the recipe comes from | | [`torch/scorers.py`](torch/scorers.py) (CLAP and the other metrics) |
-| What decoding costs | | [`torch/profile_decode.py`](torch/profile_decode.py) |
-| Early pruning | Fig. 4: prune any prompt, with audio | [`torch/evaluate.py`](torch/evaluate.py) `simulate` |
-| Evaluating the pruner | | [`torch/frontier.py`](torch/frontier.py), [`torch/future.py`](torch/future.py) |
-| Humans | | [`torch/listen.py`](torch/listen.py) (pairwise A/B test, not yet run) |
+| 1, Is CLAP best-of-N legitimate? | | [`torch/scorers.py`](torch/scorers.py) (CLAP and the other metrics) |
+| 1, A cheaper search: early pruning | Fig. 1: prune any prompt, with audio | [`torch/evaluate.py`](torch/evaluate.py) `simulate`, [`torch/frontier.py`](torch/frontier.py) |
+| 1, People in the loop | | [`torch/listen.py`](torch/listen.py) (pairwise A/B test, not yet run) |
+| 2, From waveform to tokens | Fig. 1: codebook layouts | [`torch/prune.py`](torch/prune.py) `undelay` |
+| 2, The generator | | [`torch/prune.py`](torch/prune.py) `generate`, `sample` |
+| 2, What decoding costs | | [`torch/profile_decode.py`](torch/profile_decode.py) |
+| 2, Making pruning exact | | [`torch/prune.py`](torch/prune.py) (self-check with mutations) |
 
 The interactive figures are not drawings: [`post/js/sim.js`](post/js/sim.js) is `torch/evaluate.py` ported to JavaScript, run
 on [`post/data.json`](post/data.json) in the reader's browser, and [`post/tests/sim.test.mjs`](post/tests/sim.test.mjs)
@@ -36,10 +37,10 @@ The corpus (tokens and every score, 50 prompts × 8 takes) is committed, so the 
 uv sync
 uv run python torch/prune.py                 # exactness self-check, plus mutations that must fail
 uv run pytest torch/tests -q                 # evaluation tests, and every number in the post vs results/
-uv run python torch/frontier.py              # Q1 / Q2 tables
+uv run python torch/frontier.py              # the pruning table (and other metrics of CLAP's pick)
 uv run python torch/future.py                # does the 10 s score predict the unheard last 10 s?
 
-cd post && npm ci && node build.mjs          # the post -> post/dist/index.html
+cd post && npm ci && node build.mjs          # both posts -> post/dist/
 ```
 
 With the audio (400 WAVs, 770 MB, not committed): fetch them with

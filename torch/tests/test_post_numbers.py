@@ -1,4 +1,4 @@
-"""Every headline number in post/post.md must be what the committed results files say.
+"""Every headline number in the posts (post/post.md, post/decoding.md) must be what the committed results say.
 
 Formats the value from the results JSON the way the post prints it and asserts that exact
 string appears in the post. A changed result without an updated post fails CI."""
@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-TEXT = (ROOT / "post/post.md").read_text()
+TEXT = "\n".join((ROOT / "post" / f).read_text() for f in ("post.md", "decoding.md"))
 R = lambda name: json.loads((ROOT / "results" / name).read_text())
 
 
@@ -22,7 +22,7 @@ def ci(m, d=2, signed=False):
 
 
 def expected():
-    fr, fu = R("frontier.json"), R("future_only.json")
+    fr = R("frontier.json")
     pr = R("profile_decode_small_float16_pretrained_t4.json")["batches"]
     sched = {(x["first"], x["keep"]): x for x in fr["schedules"]}
     out = []
@@ -30,15 +30,6 @@ def expected():
         mc, rt = sched[key]["sets"]["musiccaps"], sched[key]["sets"]["redteam"]
         out += [f"{mc['compute']['mean']:.3f}", ci(mc["same_winner"])]
     out.append(ci(sched[(5, 0.5)]["sets"]["redteam"]["same_winner"]))
-    for j in ("cmi_qual", "cmi_ali", "aes_CE", "mulan"):
-        m = fr["selection"][j]["musiccaps"]
-        d = 3
-        out += [ci(m["gain_vs_random"], d, signed=True), f"{m['oracle_gain']['mean']:.3f}"]
-    b = fr["selection"]["cmi_qual"]["musiccaps"]["gain_vs_random_bonferroni"]
-    out.append(f"[{s(b['lo'], 3)}, {s(b['hi'], 3)}]")
-    fut = {(x["first"], x["keep"]): x["sets"] for x in fu["schedules"]}[(10, 0.65)]
-    out += [f"{fut['musiccaps']['kept']['mean']:.2f} vs {fut['musiccaps']['chance']['mean']:.2f}",
-            ci(fut["redteam"]["excess"], signed=True)]
     b1, b8 = pr["1"], pr["8"]
     out += [f"| 1 (2) | {b1['wall_ms_per_step']:.1f} | {b1['gpu_busy_ms_per_step']:.1f} | {b1['gpu_share_of_wall']:.0%} | {b1['kernels_per_step']:.0f} |",
             f"| 8 (16) | {b8['wall_ms_per_step']:.1f} | {b8['gpu_busy_ms_per_step']:.1f} | {b8['gpu_share_of_wall']:.0%} | {b8['kernels_per_step']:.0f} |"]
@@ -47,7 +38,7 @@ def expected():
 
 @pytest.mark.parametrize("literal", expected())
 def test_post_quotes_the_results(literal):
-    assert literal in TEXT, f"post.md does not contain {literal!r} (from results/)"
+    assert literal in TEXT, f"the posts do not contain {literal!r} (from results/)"
 
 
 def test_timeline_figure_matches_the_profile():

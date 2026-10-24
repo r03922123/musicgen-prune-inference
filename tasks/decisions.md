@@ -224,3 +224,16 @@ Exploratory reference: clap10 vs chunk-1 within-prompt Spearman +0.99, confirmin
 - Removed: Fig. 3 (best-of-N curve per grader), Fig. 6 (leak scatter), `torch/agreement.py`,
   `results/judge_agreement.json`, the JS ports and tests they needed, and the judges' scores in `post/data.json`.
   No result changed. Read time 18 minutes.
+
+## 2026-10-24: two posts; the main one is about judging text-to-music
+
+- The author's question is whether picking MusicGen takes by CLAP is legitimate and how it extends. The main post
+  (`post/post.md`) is now "Judging text-to-music: CLAP best-of-N, then and now": metrics as precedent (FID, CLIP
+  score), past (FAD, KL, CLAP, human ratings in MusicGen) and present (Gui et al. 2024 FAD, Audiobox Aesthetics,
+  CMI-RM); the legitimacy of CLAP best-of-N (MusicGen reports CLAP; DALL·E and AudioLDM rerank this way); four
+  extensions, of which early pruning is the measured one.
+- In the pruning experiment CLAP defines the reference (full best-of-8's pick), so the same-winner rate needs no
+  caveat about reranking inflating CLAP; that caveat applies only to claims of improved quality and is dropped.
+- The decoding material (tokens, guidance, step-time profile, exact pruning, service design) moves to a second post,
+  `post/decoding.md`, served at /decoding/. The Q2 table (other metrics of CLAP's pick) and the leak-free check
+  are no longer quoted; `torch/frontier.py` and `torch/future.py` still compute them. No result changed.
