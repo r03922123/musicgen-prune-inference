@@ -1,5 +1,5 @@
 """
-Blind A/B listening test (the human check of Q2), macOS (plays with afplay).
+Blind A/B listening test: is the CLAP pick preferred by a person? macOS (plays with afplay).
 
   uv run python torch/listen.py                 # 20 trials, resumes from results/listening.csv
   uv run python torch/listen.py --analyse       # binomial test on the CSV only

@@ -1,5 +1,5 @@
 """
-CLAP cosine of every 10 s chunk of every saved take (C1 future-only check, tasks/decisions.md
+CLAP cosine of every 10 s chunk of every saved take (the leak-free check, tasks/decisions.md
 2026-10-23). CPU is fine; no generation.
 
   python torch/clap_chunks.py --corpus data/corpus --wavs data/wavs --out results/clap_chunks.json

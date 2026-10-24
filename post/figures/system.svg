@@ -22,13 +22,13 @@
     <text x="655" y="44" font-weight="bold">Generator workers (GPU)</text>
     <text x="655" y="62">decode loop, paged KV cache,</text><text x="655" y="78">graph-captured step per batch size</text>
     <text x="655" y="174" font-weight="bold">Checkpoint scorer</text>
-    <text x="655" y="192">codec-decode prefixes + early judge</text><text x="655" y="208">(its cost is part of the budget)</text>
-    <text x="400" y="174" font-weight="bold">Pruning policy + final judge</text>
-    <text x="400" y="192">keep the top fraction;</text><text x="400" y="208">final pick by a different model</text>
+    <text x="655" y="192">codec-decode prefixes + early scorer</text><text x="655" y="208">(its cost is part of the budget)</text>
+    <text x="400" y="174" font-weight="bold">Pruning policy + final pick</text>
+    <text x="400" y="192">keep the top fraction;</text><text x="400" y="208">pick the best survivor at 30 s</text>
     <text x="210" y="186" font-weight="bold">Audio store / CDN</text><text x="210" y="204">loudness-normalised</text>
     <text x="65" y="186" font-weight="bold">Listener</text><text x="65" y="204">plays, keeps, skips</text>
     <text x="325" y="314" font-weight="bold">Offline loop: corpus + logs</text>
-    <text x="325" y="332">replay any schedule exactly (row-keyed noise); validate judges;</text>
+    <text x="325" y="332">replay any schedule exactly (row-keyed noise); validate scorers;</text>
     <text x="325" y="348">pairwise human picks → reward model / preference tuning</text>
   </g>
   <g stroke="#555" stroke-width="1.4" fill="none" marker-end="url(#a)">

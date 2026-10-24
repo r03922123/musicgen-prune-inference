@@ -102,7 +102,7 @@ function pruner(root, data, opts = {}) {
   const ctl = el("div", { class: "controls" }, root);
   const pl = el("label", { class: "ctl-prompt", text: "Prompt " }, ctl);
   const sel = el("select", { "aria-label": "prompt" }, pl);
-  for (const [set, label] of [["redteam", "Slow builds (red team, n = 10)"], ["musiccaps", "MusicCaps (n = 40)"]]) {
+  for (const [set, label] of [["redteam", "Slow builds (n = 10)"], ["musiccaps", "MusicCaps (n = 40)"]]) {
     const og = el("optgroup", { label }, sel);
     for (const p of data.prompts.filter((q) => q.set === set)) el("option", { value: p.id, text: p.title }, og);
   }
@@ -123,7 +123,6 @@ function pruner(root, data, opts = {}) {
 
   const draw = () => {
     const p = byId[st.id], r = prune(p, st.first, st.keep);
-    const goal = r.base;
     caption.textContent = `“${p.caption}”`;
     const cutAt = Array(p.n).fill(null);
     for (const [t, alive] of Object.entries(r.alive)) for (let i = 0; i < p.n; i++) if (cutAt[i] === null && !alive.includes(i)) cutAt[i] = +t;
@@ -154,7 +153,7 @@ function pruner(root, data, opts = {}) {
       const last = pts[pts.length - 1];
       el("text", { x: last[0] + 8, y: labelY[i] + 4, class: "lbl", text: TAKES[i] }, g);
       if (i === r.winner) el("circle", { cx: last[0], cy: last[1], r: 5, class: "win" }, g);
-      if (i === goal) el("circle", { cx: last[0], cy: last[1], r: 9, class: "goal" }, g);
+      if (i === r.base) el("circle", { cx: last[0], cy: last[1], r: 9, class: "goal" }, g);
     }
     head = el("line", { y1: 28, y2: H - 40, class: "playhead" }, svg);
     head.style.display = playing === null ? "none" : "";
@@ -162,7 +161,7 @@ function pruner(root, data, opts = {}) {
     for (let i = 0; i < p.n; i++) {
       const fate = i === r.winner ? "picked" : cutAt[i] === null ? "finalist" : `cut at ${cutAt[i]} s`;
       const b = el("button", { type: "button", class: `take-b k${i}${playing === i ? " on" : ""}`, title: `Play take ${TAKES[i]} (${fate})` }, takes);
-      b.innerHTML = `<span class="sw"></span>▶ ${TAKES[i]} <small>${fate}${i === goal ? " ◎" : ""}</small>`;
+      b.innerHTML = `<span class="sw"></span>▶ ${TAKES[i]} <small>${fate}${i === r.base ? " ◎" : ""}</small>`;
       b.addEventListener("click", () => {
         if (playing === i) return stop();
         stop(); playing = i; b.classList.add("on");
@@ -170,9 +169,9 @@ function pruner(root, data, opts = {}) {
         head.style.display = ""; tick();
       });
     }
-    const goalName = "the take unpruned best-of-8 picks";
+    const base = `◎ the take unpruned best-of-8 picks (${TAKES[r.base]})`;
     mine.innerHTML = `This prompt: ${r.survivors.length} of 8 takes reach 30 s, compute <b>${r.compute.toFixed(3)}</b> of full best-of-8. ` +
-      (r.survivors.includes(goal) ? `◎ ${goalName} (${TAKES[goal]}) <b>survives</b>.` : `◎ ${goalName} (${TAKES[goal]}) is <b>cut at ${cutAt[goal]} s</b>.`);
+      (r.survivors.includes(r.base) ? `${base} <b>survives</b>.` : `${base} is <b>cut at ${cutAt[r.base]} s</b>.`);
     const inResults = [5, 10].includes(st.first) ? "" : " (not in the committed results: explore freely)";
     const line = (set, label) => {
       const s = schedule(data.prompts.filter((q) => q.set === set), st.first, st.keep);

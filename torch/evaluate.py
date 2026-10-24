@@ -59,7 +59,7 @@ def prompt_metrics(early, final, judge, cps, keep_frac, horizon=30):
 
 
 def selection_metrics(final, judge):
-    """Q2, one prompt: is the pruner's unpruned best-of-n pick better than a random candidate?
+    """One prompt: is the pruner's unpruned best-of-n pick better than a random candidate, by a judge?
       gain_vs_random  judge(pruner pick) - mean judge (the expectation of a uniform random pick)
       oracle_gain     max judge - mean judge (the most any selector could gain)
       spearman        final pruner score vs judge score, over rows (NaN if either is constant)"""
@@ -74,7 +74,7 @@ def selection_metrics(final, judge):
 
 
 def future_metrics(early, final, chunks, cps, keep_frac, horizon=30, unheard_from=20):
-    """C1 future-only check (tasks/decisions.md, 2026-10-23): does pruning on early CLAP keep the
+    """Leak-free check (tasks/decisions.md, 2026-10-23): does pruning on early CLAP keep the
     take that CLAP likes best on audio no checkpoint has heard?
     chunks: (n, 3) CLAP cosine of each 10 s chunk. Target = best last chunk (20-30 s), testable only
     if pruning's last checkpoint is <= unheard_from s. The final 30 s pick hears that chunk, so only

@@ -40,7 +40,7 @@ ones, and **per-clip metrics** score one clip, which is what you need to pick a 
 | Precedent (images) | FID | does the set look real | no |
 | | CLIP score | does the image match the text | yes |
 | Past (2023 music) | FAD | does the set sound real | no |
-| | KL over audio tags | does it carry the reference's concepts | yes |
+| | KL over audio tags | does it carry its reference recording's concepts | needs the reference |
 | | CLAP score, MuLan score | does the audio match the text | yes |
 | | Human ratings | quality and text relevance | yes |
 | Present (2024–26) | FAD with music embeddings | does the set sound real | per song possible |
@@ -103,8 +103,8 @@ Picking by CLAP stands on three facts:
    [AudioLDM](https://arxiv.org/abs/2301.12503) (Liu et al. 2023) does exactly this: its code takes
    `n_candidate_gen_per_text`, generates that many clips and keeps the one CLAP scores highest, and its reported
    metrics come from the best of 3. The Diffusers AudioLDM 2 pipeline offers the same as `num_waveforms_per_prompt`.
-3. **CLAP works per clip and on short audio.** It needs no reference set (FAD does), and it can score a 10 s
-   prefix, which matters for [pruning](#2-a-cheaper-search-early-pruning).
+3. **CLAP works per clip and on short audio.** It needs no reference audio (FAD and KL do), and it can score a
+   10 s prefix, which matters for [pruning](#2-a-cheaper-search-early-pruning).
 
 **Where it stops.** CLAP measures *text match* only. It does not hear mixing, structure or enjoyment, which is why
 MusicGen pairs it with FAD and human ratings. Two practical caveats:

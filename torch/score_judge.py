@@ -8,7 +8,7 @@ Score the saved final WAVs of a corpus with one judge (second pass, no regenerat
 Both judges build MuQ's Wav2Vec2Conformer, which transformers 5.x rejects, so scoring runs in an
 environment with transformers 4.57 (see kaggle_judge/run.py). `score` writes {id: {key: [n]}}
 (resumable: the file is rewritten after every prompt); `merge` copies those keys into
-<corpus>/<id>.json["scores"] so frontier.py / selection.py read every judge the same way.
+<corpus>/<id>.json["scores"] so frontier.py reads every judge the same way.
 """
 import argparse, json, os
 from pathlib import Path

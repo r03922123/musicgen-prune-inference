@@ -1,15 +1,14 @@
 """
-Pruning schedules evaluated offline from the unpruned corpus (Q1/Q2 split in
-tasks/decisions.md, 2026-10-18).
+Pruning schedules evaluated offline from the unpruned corpus (tasks/decisions.md, 2026-10-18).
 
   python torch/frontier.py --corpus data/corpus --out results
 
 Pruner: CLAP. Schedules: first checkpoint {5, 10} s (then every first s) x keep {0.5, 0.65, 0.75}.
-MusicCaps (mc_*) and red-team (rt_*) prompts are reported separately, each with its n.
-Q1 pruning fidelity (judge-free): same-winner rate vs the unpruned CLAP pick, compute.
+MusicCaps (mc_*) and slow-build (rt_*, the red team) prompts are reported separately, each with its n.
+Fidelity (the post's table): same-winner rate vs the unpruned CLAP pick, and compute.
   Recommended = the cheapest schedule with MusicCaps same-winner >= 0.90 (threshold chosen after
-  seeing Day 1 results). Regret / false-kill under the judge are kept per schedule.
-Q2 selection value, per judge: CLAP-pick gain vs a random candidate, oracle gain, Spearman.
+  seeing the results). Regret / false-kill under a judge are kept per schedule.
+Selection: per judge, the CLAP pick's gain vs a random take, the best possible gain, Spearman.
 """
 import argparse, json
 from pathlib import Path

@@ -219,6 +219,11 @@ choice is **best-of-8 with pruning vs best-of-2 without**.
   judge.
 - **Replay offline** (pruning is exact): log tokens and scores, and test new schedules on real traffic.
 
+## Reproducibility
+
+`torch/tests/test_post_numbers.py` checks the profiler table against the committed results and the timeline
+figure against the profile; `torch/prune.py` runs the exactness self-check on a tiny random model in seconds.
+
 ## Exercises
 
 1. **Codec arithmetic.** 9 codebooks of 1024 entries at 86 frames per second: what bitrate, and how many tokens

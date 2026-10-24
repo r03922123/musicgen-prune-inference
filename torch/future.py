@@ -1,9 +1,9 @@
 """
-C1 future-only check (pre-registered in tasks/decisions.md, 2026-10-23).
+Leak-free check (pre-registered in tasks/decisions.md, 2026-10-23).
 
   python torch/future.py --corpus data/corpus --chunks results/clap_chunks.json --out results
 
-Q1 asks whether pruning keeps CLAP best-of-8's 30 s pick; that target shares chunk 1 (0-10 s) with
+The fidelity table asks whether pruning keeps CLAP best-of-8's 30 s pick; that target shares chunk 1 (0-10 s) with
 the 10 s checkpoint score. Here the target is the take CLAP likes best on the last 10 s chunk
 (20-30 s), which no testable schedule has heard. Primary: kept - k/8 per schedule, bootstrap CI
 over prompts. Secondary: within-prompt Spearman of early CLAP vs later chunks.

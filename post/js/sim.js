@@ -31,7 +31,7 @@ const argmax = (x) => x.reduce((b, v, i) => (v > x[b] ? i : b), 0);
 const mean = (x) => x.reduce((a, b) => a + b, 0) / x.length;
 const early = (p) => Object.fromEntries(Object.entries(p.clap).map(([t, v]) => [Number(t), v]));
 
-// Q1 for one prompt: does pruning keep the take unpruned best-of-n would pick?
+// One prompt: does pruning keep the take unpruned best-of-8 would pick? (and the leak-free check's target)
 export function prune(p, first, keep) {
   const e = early(p), cps = first ? checkpoints(first) : [];
   const r = simulate(e, e[30], cps, keep);
