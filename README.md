@@ -17,8 +17,9 @@ Every analysis decision, dated: [`tasks/decisions.md`](tasks/decisions.md).
 
 | Post, section | Interactive figure | Code |
 |---|---|---|
+| 1, How generated music is judged | Fig. 1: metrics timeline (static) | |
 | 1, Is CLAP best-of-N legitimate? | | [`torch/scorers.py`](torch/scorers.py) (CLAP and the other metrics) |
-| 1, A cheaper search: early pruning | Fig. 1: prune any prompt, with audio | [`torch/evaluate.py`](torch/evaluate.py) `simulate`, [`torch/frontier.py`](torch/frontier.py) |
+| 1, A cheaper search: early pruning | Fig. 2: prune any prompt, with audio | [`torch/evaluate.py`](torch/evaluate.py) `simulate`, [`torch/frontier.py`](torch/frontier.py) |
 | 1, People in the loop | | [`torch/listen.py`](torch/listen.py) (pairwise A/B test, not yet run) |
 | 2, From waveform to tokens | Fig. 1: codebook layouts | [`torch/prune.py`](torch/prune.py) `undelay` |
 | 2, The generator | | [`torch/prune.py`](torch/prune.py) `generate`, `sample` |
@@ -37,17 +38,15 @@ The corpus (tokens and every score, 50 prompts × 8 takes) is committed, so the 
 uv sync
 uv run python torch/prune.py                 # exactness self-check, plus mutations that must fail
 uv run pytest torch/tests -q                 # evaluation tests, and every number in the post vs results/
-uv run python torch/frontier.py              # the pruning table (and other metrics of CLAP's pick)
-uv run python torch/future.py                # does the 10 s score predict the unheard last 10 s?
+uv run python torch/frontier.py              # the pruning table
 
 cd post && npm ci && node build.mjs          # both posts -> post/dist/
 ```
 
 With the audio (400 WAVs, 770 MB, not committed): fetch them with
 `uvx kaggle kernels output samlinlinlin/musicgen-prune-corpus -p data/wavs_dl --file-pattern 'wavs\.tar'` and untar
-into `data/wavs/`. Then `torch/clap_chunks.py` re-scores every 10 s chunk (CPU, ~25 min), `torch/listen.py` runs a
-blind A/B test, and `torch/build_post_data.py` rebuilds the post's data and MP3s (the published MP3s are the release
-asset pinned in `post/audio.lock`).
+into `data/wavs/`. Then `torch/listen.py` runs a blind A/B test, and `torch/build_post_data.py` rebuilds the post's
+data and MP3s (the published MP3s are the release asset pinned in `post/audio.lock`).
 
 GPU jobs run on a Kaggle T4, one folder per kernel (`kaggle_corpus/`, `kaggle_judge/`, `kaggle_cmi/`,
 `kaggle_profile/`, `kaggle_job/`; sources are embedded by `kaggle_job/bundle.py`). The original MLX implementation

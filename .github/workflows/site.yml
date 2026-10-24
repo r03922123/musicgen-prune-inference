@@ -7,7 +7,7 @@ name: site
 on:
   push:
     branches: [master]
-    paths: ["post/**", "torch/build_post_data.py", "torch/future.py", "torch/evaluate.py", "torch/frontier.py",
+    paths: ["post/**", "torch/build_post_data.py", "torch/evaluate.py", "torch/frontier.py",
             "torch/tests/**", "results/**", "data/corpus/*.json",
             ".github/workflows/site.yml"]
   workflow_dispatch:

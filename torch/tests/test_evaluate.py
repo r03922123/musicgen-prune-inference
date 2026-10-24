@@ -54,27 +54,18 @@ def test_winner_is_best_final_among_survivors():
     assert r["survivors"] == [1, 2] and r["winner"] == 2   # row 0 has the best final but is dead
 
 
-# --- part 2: per-prompt metrics and bootstrap CIs ---
+# --- part 2: per-prompt fidelity and bootstrap CIs ---
 import numpy as np
-from evaluate import prompt_metrics, bootstrap_ci, aggregate
-
-JUDGE = [1.0, 2.0, 3.0, 4.0]
+from evaluate import fidelity, bootstrap_ci, aggregate
 
 
-def test_toy_prompt_metrics():
-    m = prompt_metrics(EARLY, FINAL, JUDGE, [10, 20], 0.5)
-    assert m["compute"] == pytest.approx(70 / 120)
-    assert m["regret"] == pytest.approx(-2.0)        # judge(best-of-4 by pruner = row 0) - judge(row 2)
-    assert m["oracle_regret"] == pytest.approx(1.0)  # judge max (row 3) - judge(row 2)
-    assert m["same_winner"] == 0.0
-    assert m["false_kill"] == 0.5                    # judge top-2 = {3, 2}; row 3 was pruned
-    assert m["spearman"] == pytest.approx(0.2)       # pruner @10s vs judge: ranks [1,4,3,2] vs [1,2,3,4]
-    assert m["survivors"] == 1                       # false-kill >= 0.5 whenever this is 1
+def test_toy_fidelity():
+    m = fidelity(EARLY, FINAL, [10, 20], 0.5)
+    assert m == {"compute": pytest.approx(70 / 120), "same_winner": 0.0}   # pruned row 2, unpruned row 0
 
 
-def test_unpruned_schedule_has_zero_regret():
-    m = prompt_metrics(EARLY, FINAL, JUDGE, [], 0.5)
-    assert m["regret"] == 0 and m["same_winner"] == 1.0 and m["false_kill"] == 0 and m["compute"] == 1
+def test_unpruned_schedule_is_faithful():
+    assert fidelity(EARLY, FINAL, [], 0.5) == {"compute": 1.0, "same_winner": 1.0}
 
 
 def test_bootstrap_is_seeded_and_brackets_the_mean():
@@ -94,10 +85,9 @@ def test_bootstrap_drops_nan():
 
 
 def test_aggregate_reports_every_metric_with_n():
-    rows = [prompt_metrics(EARLY, FINAL, JUDGE, [10, 20], 0.5)] * 3
-    agg = aggregate(rows)
-    assert set(agg) == {"compute", "regret", "oracle_regret", "same_winner", "false_kill", "spearman", "survivors"}
-    assert agg["regret"]["mean"] == pytest.approx(-2.0) and agg["regret"]["n"] == 3
+    agg = aggregate([fidelity(EARLY, FINAL, [10, 20], 0.5)] * 3)
+    assert set(agg) == {"compute", "same_winner"}
+    assert agg["same_winner"]["mean"] == 0.0 and agg["compute"]["n"] == 3
 
 
 def test_bootstrap_all_nan_is_empty_not_a_warning():
@@ -106,54 +96,3 @@ def test_bootstrap_all_nan_is_empty_not_a_warning():
         warnings.simplefilter("error")
         ci = bootstrap_ci(np.array([np.nan, np.nan]))
     assert ci["n"] == 0 and np.isnan(ci["mean"])
-
-
-# Q2 selection value (tasks/decisions.md, Day 2): toy prompt, pruner FINAL [.9, .2, .3, .1]
-# picks row 0. Judge [2, 4, 3, 1]: mean 2.5, so gain vs a uniformly random candidate =
-# 2 - 2.5 = -0.5; oracle gain = 4 - 2.5 = 1.5; Spearman(FINAL, judge) on ranks
-# [4,2,3,1] vs [2,4,3,1] = 1 - 6*(4+4+0+0)/(4*15) = 0.2.
-def test_toy_selection_metrics():
-    from evaluate import selection_metrics
-    m = selection_metrics(FINAL, [2, 4, 3, 1])
-    assert m["gain_vs_random"] == pytest.approx(-0.5)
-    assert m["oracle_gain"] == pytest.approx(1.5)
-    assert m["spearman"] == pytest.approx(0.2)
-
-
-def test_selection_constant_pruner_picks_row_0_and_spearman_is_nan():
-    from evaluate import selection_metrics
-    m = selection_metrics([.5, .5, .5, .5], [2, 4, 3, 1])   # ties: first row picked
-    assert m["gain_vs_random"] == pytest.approx(-0.5) and m["oracle_gain"] == pytest.approx(1.5)
-    assert m["spearman"] != m["spearman"]                     # constant input: NaN, dropped by bootstrap
-
-
-# C1 future-only check (tasks/decisions.md, 2026-10-23). Toy, 4 takes, early CLAP identical at
-# 10 s and 20 s: [.4, .3, .2, .1]; chunk-3 (20-30 s) cosines [.1, .2, .9, .3] -> F = take 2.
-#   keep 0.5 , cps [10, 20]: alive {10: [0, 1], 20: [0]} -> F cut at 10 s; k = 1, chance 1/4
-#   keep 0.75, cps [10, 20]: alive {10: [0, 1, 2], 20: [0, 1, 2]} -> F kept; k = 3, chance 3/4
-FE = {10: [.4, .3, .2, .1], 20: [.4, .3, .2, .1]}
-CH = [[.4, .3, .1], [.3, .3, .2], [.2, .3, .9], [.1, .3, .3]]
-
-
-def test_future_metrics_cut_and_kept():
-    from evaluate import future_metrics
-    m = future_metrics(FE, [0, 0, 0, 0], CH, [10, 20], 0.5)
-    assert m["testable"] and m["target"] == 2 and m["kept"] == 0.0
-    assert m["chance"] == pytest.approx(1 / 4) and m["excess"] == pytest.approx(-1 / 4) and m["cut_first"] == 1.0
-    m = future_metrics(FE, [0, 0, 0, 0], CH, [10, 20], 0.75)
-    assert m["kept"] == 1.0 and m["chance"] == pytest.approx(3 / 4) and m["excess"] == pytest.approx(1 / 4)
-    assert m["cut_first"] == 0.0
-
-
-def test_future_metrics_not_testable_once_a_checkpoint_hears_chunk_3():
-    from evaluate import future_metrics
-    s = [.4, .3, .2, .1]
-    m = future_metrics({t: s for t in (5, 10, 15, 20, 25)}, [0, 0, 0, 0], CH, [5, 10, 15, 20, 25], 0.75)
-    assert m == {"testable": False}
-
-
-def test_future_metrics_testable_when_pruning_stops_early():
-    from evaluate import future_metrics
-    s = [.4, .3, .2, .1]               # keep 0.5 reaches one survivor at 10 s, never checks 15-25 s
-    m = future_metrics({t: s for t in (5, 10, 15, 20, 25)}, [0, 0, 0, 0], CH, [5, 10, 15, 20, 25], 0.5)
-    assert m["testable"] and m["kept"] == 0.0 and m["chance"] == pytest.approx(1 / 4)

@@ -34,16 +34,9 @@ def load(a, dev, dtype):
         m = random_model(*SIZES[a.size])
         torch.manual_seed(0)
         return m.to(dev, dtype), torch.randn(1, 12, SIZES[a.size][0])
-    from transformers import AutoProcessor, MusicgenForConditionalGeneration
-    name = f"facebook/musicgen-{a.size}"
-    full, proc = MusicgenForConditionalGeneration.from_pretrained(name).eval(), AutoProcessor.from_pretrained(name)
-    with torch.inference_mode():  # T5 stays fp32 (fp16 T5 overflows); only the decoder is cast
-        inp = proc(text=[PROMPT], return_tensors="pt")
-        h = full.text_encoder(**inp).last_hidden_state
-        if hasattr(full, "enc_to_dec_proj"):
-            h = full.enc_to_dec_proj(h)
-        cond = h * inp["attention_mask"][..., None]
-    return full.decoder.eval().to(dev, dtype), cond
+    from generate_corpus import load_musicgen, text_cond     # T5 stays fp32; only the decoder is cast
+    full, proc = load_musicgen(a.size, dev, dtype)
+    return full.decoder, text_cond(full, proc, PROMPT)
 
 
 def steps_mode(a):

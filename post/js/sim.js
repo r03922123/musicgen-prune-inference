@@ -31,27 +31,16 @@ const argmax = (x) => x.reduce((b, v, i) => (v > x[b] ? i : b), 0);
 const mean = (x) => x.reduce((a, b) => a + b, 0) / x.length;
 const early = (p) => Object.fromEntries(Object.entries(p.clap).map(([t, v]) => [Number(t), v]));
 
-// One prompt: does pruning keep the take unpruned best-of-8 would pick? (and the leak-free check's target)
+// One prompt: does pruning keep the take unpruned best-of-8 would pick?
 export function prune(p, first, keep) {
   const e = early(p), cps = first ? checkpoints(first) : [];
   const r = simulate(e, e[30], cps, keep);
   const base = argmax(e[30]);
-  const target = argmax(p.chunks.map((c) => c[2]));        // best on the unheard 20-30 s chunk
-  const testable = !Object.keys(r.alive).some((t) => Number(t) > 20);
-  return { ...r, cps, base, same: r.winner === base, target, testable,
-           kept: r.survivors.includes(target), chance: r.survivors.length / p.n };
+  return { ...r, cps, base, same: r.winner === base };
 }
 
-// Averages over a set of prompts, as frontier.json and future_only.json report them.
+// Averages over a set of prompts, as frontier.json reports them.
 export function schedule(prompts, first, keep) {
   const rs = prompts.map((p) => prune(p, first, keep));
-  const testable = rs.every((r) => r.testable);
-  return {
-    n: rs.length,
-    compute: mean(rs.map((r) => r.compute)),
-    sameWinner: mean(rs.map((r) => +r.same)),
-    testable,
-    kept: testable ? mean(rs.map((r) => +r.kept)) : NaN,
-    chance: testable ? mean(rs.map((r) => r.chance)) : NaN,
-  };
+  return { n: rs.length, compute: mean(rs.map((r) => r.compute)), sameWinner: mean(rs.map((r) => +r.same)) };
 }

@@ -4,8 +4,7 @@ Build the post's interactive-figure data and audio (post/). Mac, no GPU, no mode
   python torch/build_post_data.py                 # post/data.json + post/audio/<id>_<row>.mp3
   python torch/build_post_data.py --no-audio      # data.json only
 
-data.json holds, per prompt, the caption, CLAP scores of every 5 s prefix and CLAP of each 10 s chunk
-(results/clap_chunks.json). The pruning figure recomputes the committed results from it in the browser; post/tests/sim.test.mjs checks they match results/. Audio: every
+data.json holds, per prompt, the caption and the CLAP scores of every 5 s prefix. The pruning figure recomputes the committed results from it in the browser; post/tests/sim.test.mjs checks they match results/. Audio: every
 take loudness-normalised to -16 LUFS with one linear gain (no compression, so slow builds keep
 their dynamics), peak-limited, boost capped at +15 dB, 64 kbps mono MP3.
 """
@@ -24,14 +23,13 @@ def title(caption, n=64):
     return t if len(t) <= n else t[:n].rsplit(" ", 1)[0] + "…"
 
 
-def prompts(recs, chunks):
+def prompts(recs):
     out = []
     for r in recs:
         s = r["scores"]
         out.append({"id": r["id"], "set": "redteam" if r["id"].startswith("rt_") else "musiccaps",
                     "title": title(r["prompt"]), "caption": r["prompt"], "n": r["n"],
-                    "clap": {str(t): s["clap"][str(t)] for t in PREFIXES},
-                    "chunks": chunks[r["id"]]})
+                    "clap": {str(t): s["clap"][str(t)] for t in PREFIXES}})
     return out
 
 
@@ -57,15 +55,13 @@ def encode(src, dst, ffmpeg="ffmpeg"):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--corpus", default=str(ROOT / "data/corpus"))
-    ap.add_argument("--results", default=str(ROOT / "results"))
     ap.add_argument("--wavs", default=str(ROOT / "data/wavs"))
     ap.add_argument("--out", default=str(ROOT / "post"))
     ap.add_argument("--no-audio", action="store_true")
     a = ap.parse_args()
     recs = [json.loads(p.read_text()) for p in sorted(Path(a.corpus).glob("*.json"))]
-    chunks = json.loads((Path(a.results) / "clap_chunks.json").read_text())
     data = {"model": recs[0]["model"], "seconds": recs[0]["seconds"], "prefixes": list(PREFIXES),
-            "prompts": prompts(recs, chunks)}
+            "prompts": prompts(recs)}
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "data.json").write_text(json.dumps(data, separators=(",", ":")))

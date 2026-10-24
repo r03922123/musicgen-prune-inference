@@ -237,3 +237,15 @@ Exploratory reference: clap10 vs chunk-1 within-prompt Spearman +0.99, confirmin
 - The decoding material (tokens, guidance, step-time profile, exact pruning, service design) moves to a second post,
   `post/decoding.md`, served at /decoding/. The Q2 table (other metrics of CLAP's pick) and the leak-free check
   are no longer quoted; `torch/frontier.py` and `torch/future.py` still compute them. No result changed.
+
+## 2026-10-24: editorial review (Karpathy, Distill): the repo keeps only what the posts use
+
+- Removed analyses the posts no longer quote: the leak-free check (`torch/future.py`, `torch/clap_chunks.py`,
+  `results/future_only.json`, `results/clap_chunks.json`, the chunks in `post/data.json`, its JS and tests) and the
+  judge readings of CLAP's pick (`selection` in `results/frontier.json`). Both remain in git history; the entries
+  above record their outcomes.
+- `torch/frontier.py` now computes only what the post's table shows: compute and same-winner per schedule, and the
+  recommended schedule. Regret, false-kill, Spearman, secondary judges and `results/frontier.png` are gone; the
+  compute and same-winner numbers are identical to before (checked field by field). matplotlib is no longer needed.
+- `torch/bench.py` reuses `generate_corpus.load_musicgen` / `text_cond` (same conditioning, max diff 0.0).
+- Post 1 gains Fig. 1, a static timeline of metrics by question (sounds real / matches text / people like it).

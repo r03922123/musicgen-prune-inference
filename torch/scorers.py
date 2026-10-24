@@ -49,13 +49,6 @@ class Clap:
         clip = torch.stack([a[owner == b].mean(0) for b in range(len(wavs))])
         return {"clap": ((clip / clip.norm(dim=-1, keepdim=True)) @ t.T)[:, 0].float().cpu().numpy()}
 
-    @torch.inference_mode()
-    def chunks(self, wavs, prompt):
-        """Cosine of each 10 s chunk on its own (no averaging): list per clip, in time order."""
-        t, a, owner = self._embed(wavs, prompt)
-        cos = (a @ t.T)[:, 0].float().cpu().numpy()
-        return [cos[(owner == b).cpu().numpy()].tolist() for b in range(len(wavs))]
-
 
 class Audiobox:
     """Audiobox Aesthetics: resamples to 16 kHz and averages 10 s windows internally."""

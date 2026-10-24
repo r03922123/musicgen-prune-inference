@@ -31,21 +31,12 @@ to **score** a take automatically. When I used MusicGen, I generated N takes and
 
 ## How generated music is judged
 
-Every metric below answers one of three questions: *does it sound real*, *does it match the text*, *do people like
-it*. Two kinds of metric recur: **distribution metrics** compare a whole set of generated clips with a set of real
-ones, and **per-clip metrics** score one clip, which is what you need to pick a take.
+Every metric below answers one of three questions: *does it sound like real music*, *does it match the text*, *do
+people like it*. The first kind compares a whole set of generated clips with real recordings, so it needs reference
+audio and cannot rank the takes of one prompt. The other two score one clip at a time, which is what you need to
+pick a take.
 
-| Era | Metric | Question | Per clip? |
-|---|---|---|---|
-| Precedent (images) | FID | does the set look real | no |
-| | CLIP score | does the image match the text | yes |
-| Past (2023 music) | FAD | does the set sound real | no |
-| | KL over audio tags | does it carry its reference recording's concepts | needs the reference |
-| | CLAP score, MuLan score | does the audio match the text | yes |
-| | Human ratings | quality and text relevance | yes |
-| Present (2024–26) | FAD with music embeddings | does the set sound real | per song possible |
-| | Audiobox Aesthetics | quality and enjoyment, as people rate it | yes |
-| | Music reward models (CMI-RM) | which take people would prefer | yes |
+![Metrics timeline](figures/metrics.svg "**Fig. 1. Three questions, three eras.** Each row is a question, each marker a metric placed at its paper's date. Hollow markers are image metrics, filled ones audio or music; diamonds were also used to pick the best of N samples. MusicGen (dashed line) answers all three; the newest metrics learn from human ratings.")
 
 ### Precedent: images
 
@@ -160,7 +151,7 @@ def simulate(early, final, cps, keep_frac, horizon=30):
 ```
 
 :::figure pruner prompt=rt_00
-**Fig. 1. Prune it yourself.** That function, on the real CLAP scores of all 400 takes. Each line is one take's
+**Fig. 2. Prune it yourself.** That function, on the real CLAP scores of all 400 takes. Each line is one take's
 score as it is generated. At each dashed checkpoint the lowest takes are cut (×); their faded continuation would
 never be generated. ● is the pruned run's pick, ◎ unpruned best-of-8's. Press a take to hear it. **Try:** on
 "orchestral build-up", keep-half cuts take D at 20 s, yet D is unpruned best-of-8's pick; keep 0.65 saves it. Then
