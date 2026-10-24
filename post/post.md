@@ -33,7 +33,7 @@ tell early which takes are worth finishing?
 Everything is grounded in one small, reproducible study: MusicGen-small, 50 prompts, 8 takes each, a Kaggle T4 GPU
 and a laptop. Every number comes from a committed results file in the
 [companion repo](https://github.com/r03922123/musicgen-prune-inference), or is derived from the model's
-configuration, and I say which.^[Five minutes? Skip to [Fig. 6](#early-pruning), pick "orchestral build-up",
+configuration, and I say which.^[Five minutes? Skip to [Fig. 5](#early-pruning), pick "orchestral build-up",
 press play on take D, then move the first checkpoint from 10 s to 5 s.]
 
 The post builds in four steps, each using the one before:
@@ -41,8 +41,8 @@ The post builds in four steps, each using the one before:
 | Step | Question | Short answer |
 |---|---|---|
 | 1. [Tokens](#from-waveform-to-tokens) and [the generator](#the-generator) | What is generated? | 6,000 tokens per 30 s take, drawn with random noise. |
-| 2. [Judging music](#judging-music) | Who picks the best take? | Learned judges, and they disagree. |
-| 3. [Cost](#what-best-of-n-costs) | What does choosing cost? | N times the work; the GPU mostly waits. |
+| 2. [Best-of-N and its judges](#best-of-n-and-its-judges) | What does picking buy, and who picks? | Less with each doubling; and the cheap judge picks barely better than chance. |
+| 3. [Decoding cost](#what-decoding-costs) | Where does the time go? | N times the work; the GPU mostly waits. |
 | 4. [Pruning](#early-pruning) and [evaluation](#evaluating-a-pruner) | Can we stop bad takes early? | Yes, exactly; but cheaper is not better. |
 
 **Notation.** A prompt is $x$, a take is $y$, and a judge gives a take a score $r(x, y)$, higher is better.
@@ -186,13 +186,27 @@ judge a 10 s prefix while the rest is still unwritten. (Diffusion models, like
 [Stable Audio Open](https://arxiv.org/abs/2407.14358), instead refine the whole clip from coarse to fine; there you
 would judge a blurry draft.)
 
-## Judging music
+## Best-of-N and its judges
 
-Best-of-N needs a function $r(x, y)$: given the prompt and *one* take, return a number, higher meaning better. Who
-writes that function?
+Best-of-N has two halves: draw $N$ takes, then pick one. The generator above does the drawing. Picking needs a
+**judge**, a function $r(x, y)$ that looks at the prompt and *one* take and returns a number, higher meaning
+better. LLM papers call the same thing a *reward model* or a *verifier*. First, what would a perfect judge buy?
+
+### What does N buy?
+
+Start with dice. Roll one die: you expect 3.5. Keep the best of two: 4.47. Of four: 5.24. Of eight: 5.72. Each
+doubling buys less than the last, because the best can only creep toward the top.^[Exact: the expected maximum of
+$N$ dice is $\sum_{k=1}^{6} \big(1 - ((k-1)/6)^N\big)$. For normally distributed scores the best of $N$ grows like
+$\sqrt{2 \ln N}$ standard deviations.] Cost, meanwhile, doubles every time. Music reward models show the same
+shape: in TuneJury ([Kim et al. 2026](https://arxiv.org/abs/2606.17006)) the gain per doubling of $N$ fell from
++0.18–0.29 (4 → 8) to +0.06–0.14 (16 → 32).
+
+So even a perfect judge has diminishing returns. Real judges are not perfect, and that turns out to matter more.
+
+### The judges in this study
 
 "Better" mixes at least three things: did it follow the prompt, does it sound clean, do I want to keep listening.
-No judge measures all three. These are the judges in this study:
+No judge measures all three. These are the four used here:
 
 | Judge | Reads the prompt? | Learned from | Measures |
 |---|---|---|---|
@@ -201,9 +215,9 @@ No judge measures all three. These are the judges in this study:
 | Audiobox Aesthetics | no | human 1–10 ratings | quality and enjoyment |
 | CMI-RM | yes | human preferences between two takes | quality and prompt match, as people judge them |
 
-Five training signals, four judges. If they disagree about which take is best, at most one of them is right. (You
-may know FAD, the audio FID. It compares a *set* of clips to real audio, so it can rank models but cannot score one
-take. It does not appear here.)
+They come in two families: judges that compare audio with text (the first two), and judges trained on human
+opinions (the last two). (You may know FAD, the audio FID. It compares a *set* of clips to real audio, so it can
+rank models but cannot score one take. It does not appear here.)
 
 ### CLAP: does the audio match the words?
 
@@ -256,73 +270,44 @@ In words: only the gap between two scores matters, and training pushes each pref
 other's. [CMI-RM](https://arxiv.org/abs/2603.00610) (ICML 2026) is such a model, with one head for musical quality
 and one for prompt match.
 
-All of these judges are learned models with their own blind spots. Before trusting one, the cheapest check is to
-ask whether independent judges agree.
+### Pick with one judge, grade with another
 
-### Do judges agree?
+A judge is a model, so it has blind spots. Pick with a judge and grade the pick with the *same* judge, and you
+measure how well you found its blind spots, not how good the music is. LLM alignment calls this **reward hacking**
+or *overoptimization*. [Gao et al. (2023)](https://arxiv.org/abs/2210.10760) ran best-of-$n$ against a *proxy*
+reward model while a separate *gold* reward model graded the picks: the gold score rose far less than the proxy
+score, and with enough optimization it fell. The standard remedy is simple: **select with one judge, grade with
+judges the selector never saw.**
 
-Agreement sounds like one question. It is two, and best-of-N needs only one of them.
-
-Picture two prompts. On prompt A every take came out decent; on prompt B every take is poor. Any two judges will
-score A's takes above B's, so they "agree", even if *within* A one judge's favourite is the other's least
-favourite. That is agreement **across prompts**, and it mostly means both judges notice some prompts are easier.
-Best-of-N never compares takes of different prompts. It needs agreement **within a prompt**: do the judges rank
-that prompt's 8 takes the same way? Look at both:
-
-:::figure agree prompt=mc_ZLXW4ewrVpQ
-**Fig. 3. Do two judges pick the same take?** One line per take, from its rank under CLAP (left) to its rank under
-a second judge (right). Parallel lines: the judges agree. Crossing lines: they disagree. The default prompt is a
-typical one; its CLAP–MuQ-MuLan agreement is close to the 50-prompt average. **Try:** step through a few prompts:
-lines cross about as often as they run parallel. Then pick CMI-RM quality and switch to *the 50 prompts*: ranked by
-their average take, whole prompts line up noticeably better (ρ = +0.62 against +0.25). That across-prompt agreement
-is real, but best-of-N cannot use it.
-:::
-
-To put a number on it, use **Spearman's $\rho$**: replace scores by ranks and correlate the ranks ($+1$ same order,
-$0$ unrelated). Within a prompt, I compute $\rho$ over its 8 takes and average over the 50 prompts (exploratory,
-$n = 50$, `results/judge_agreement.json`):
-
-| Judges | Across prompts | Within a prompt | Same favourite take (chance 0.125) |
-|---|---|---|---|
-| CLAP vs MuQ-MuLan | +0.35 | **+0.01 [−0.11, +0.13]** | 0.16 [0.06, 0.26] |
-| CLAP vs CMI-RM quality | +0.62 | +0.25 [+0.17, +0.34] | 0.18 [0.08, 0.30] |
-
-Read the first row slowly. CLAP and MuQ-MuLan, built for the same job, agree on *which prompts* went well and not at
-all on *which take* is best. In plain terms: CLAP's favourite take is also MuQ-MuLan's on 16% of prompts, barely
-above the 12.5% of picking at random.
-
-So "the model picked the best take" means nothing until you say *best according to whom*. Pick the judge before the
-algorithm, and never let the scorer that selects also be the one that grades.
-
-## What best-of-N costs
-
-How much better does the pick get as $N$ grows, and what does each take cost in time?
-
-### What does N buy you?
-
-Start with dice. Roll one die: you expect 3.5. Keep the best of two: 4.47. Of four: 5.24. Of eight: 5.72. Each
-doubling buys less than the last, because the best can only creep toward the top.^[Exact: the expected maximum of
-$N$ dice is $\sum_{k=1}^{6} \big(1 - ((k-1)/6)^N\big)$. For normally distributed scores the best of $N$ grows like
-$\sqrt{2 \ln N}$ standard deviations.] Cost, meanwhile, doubles every time. Music reward models show the same
-shape: in TuneJury ([Kim et al. 2026](https://arxiv.org/abs/2606.17006)) the gain per doubling of $N$ fell from
-+0.18–0.29 (4 → 8) to +0.06–0.14 (16 → 32).
-
-That assumes the selector finds the best take. Fig. 3 says it may not. So the next figure separates the two: what
-the takes *could* give if you picked with the grading judge itself (the *oracle*), and what they give when CLAP
-picks. The y-axis is the **gain over a random take**: the judge's score of the pick minus the average of all 8.
-Zero means "no better than not choosing".
+Here the selector is CLAP. It is cheap and can score a 10 s prefix, which pruning will need. The other three judges
+grade. The y-axis below is the **gain over a random take**: the grader's score of the pick minus the average of all
+8 takes. Zero means "no better than not choosing". The **oracle** picks with the grader itself, the most these
+takes could give.
 
 :::figure bestofn
-**Fig. 4. What N buys, and who picks.** For each $N$: the average, over MusicCaps prompts and every subset of $N$
-of the 8 takes, of the judge's score of the pick minus the average take. Bands are 95% bootstrap intervals over
-prompts. Switch judges: CLAP stays far below the oracle under every judge, and under MuQ-MuLan it is flat at zero,
-as Fig. 3 predicts. **Caveat:** subsets come from a fixed pool of 8, so these curves say nothing about $N > 8$.
+**Fig. 3. Pick with CLAP, grade with someone else.** For each $N$: the average, over MusicCaps prompts and every
+subset of $N$ of the 8 takes, of the grader's score of the pick minus the average take. Bands are 95% bootstrap
+intervals over prompts. **Try:** switch the grader. CLAP stays far below the oracle under every grader, and under
+MuQ-MuLan, built for the same job as CLAP, it is flat at zero. **Caveat:** subsets come from a fixed pool of 8, so
+these curves say nothing about $N > 8$.
 :::
 
-The gap between the curves is value that more candidates *could* buy but CLAP cannot find. Keep it in mind:
-making a weak selector cheaper does not make it stronger.
+Why such a gap? Ask the simplest question: out of a prompt's 8 takes, how often do two judges pick the *same*
+favourite? Picking at random would agree 1 time in 8 (0.125). CLAP and MuQ-MuLan agree on 0.16 [0.06, 0.26] of
+prompts, CLAP and CMI-RM quality on 0.18 [0.08, 0.30] ($n = 50$, `results/judge_agreement.json`). Barely above
+chance.^[The judges do agree on which *prompts* went well, because some prompts are simply easier: averaged per
+prompt, CLAP and MuQ-MuLan correlate at +0.35. Best-of-N never compares takes of different prompts, so that
+agreement does not help it.]
 
-### Where the time goes: estimate first
+**In practice:** say *whose* best you mean, and report every result under graders the selector never saw. In this
+post CLAP selects and prunes, the other three grade, and the pruner is never the judge. The gap in Fig. 3 is value
+that more takes *could* buy but CLAP cannot find; making a weak selector cheaper will not make it stronger.
+
+## What decoding costs
+
+Every take costs the same, however it is picked. Where does that time go?
+
+### Estimate first
 
 To write one token, the GPU has to read the entire model from memory. So one step on MusicGen-small must at least:
 
@@ -337,7 +322,7 @@ matter because the weights are read once per step however many rows there are.^[
 about 16 FLOP per byte of weights, far below the T4's ~200 FLOP/byte ridge point.] For real-time playback, a step
 must finish in **20 ms**.
 
-### Where the time goes: measured
+### Then measure
 
 Timing 1,500 steps on the T4 (fp16, eager PyTorch; `torch/results_steps_torch_small_float16_pretrained_t4.json`):
 
@@ -356,7 +341,7 @@ whatever the batch**, seven times the 2.6 ms estimate. Something other than GPU 
 | 1 (2) | 18.7 | 6.5 | 35% | 498 | 13 µs |
 | 8 (16) | 22.2 | 8.6 | 39% | 499 | 17 µs |
 
-![GPU timeline](figures/timeline.svg "**Fig. 5. Where a decoding step goes (schematic).** The CPU spends the step launching about 500 tiny kernels through Python and PyTorch; the GPU finishes each in microseconds and then waits. Measured on a T4 at batch 1: 18.7 ms per step, of which the GPU is busy 6.5 ms.")
+![GPU timeline](figures/timeline.svg "**Fig. 4. Where a decoding step goes (schematic).** The CPU spends the step launching about 500 tiny kernels through Python and PyTorch; the GPU finishes each in microseconds and then waits. Measured on a T4 at batch 1: 18.7 ms per step, of which the GPU is busy 6.5 ms.")
 
 Read the batch-1 row as a story. A step is about 500 small GPU programs (kernels), each running about 13 µs. Each
 has to be *launched* from Python on the CPU, and the CPU launches them more slowly than the GPU runs them. So the
@@ -423,7 +408,7 @@ Now run it yourself. The figure is that function in JavaScript, on the real CLAP
 their audio.
 
 :::figure pruner prompt=rt_00
-**Fig. 6. Prune it yourself.** Each line is one take's CLAP score as it is generated, scored every 5 s. At each
+**Fig. 5. Prune it yourself.** Each line is one take's CLAP score as it is generated, scored every 5 s. At each
 dashed checkpoint the lowest-scoring takes are cut (×); their faded continuation is music that would never be
 generated. ● is the pruned run's pick and ◎ the take it should have kept. Press a take to hear it. **Try:** on
 "orchestral build-up", take D is cut at 20 s by keep-half, yet it is what unpruned best-of-8 picks; keep 0.65 saves
@@ -465,7 +450,7 @@ that keeps the wrong rows, must each break the match. A test that passes on brok
 
 The payoff: since survivors equal their unpruned rows, you can **generate once, unpruned, and simulate every
 schedule exactly from the saved scores**. A GPU experiment per schedule becomes a millisecond loop, which is why
-Fig. 6 runs in your browser.
+Fig. 5 runs in your browser.
 
 ### Measured speedup
 
@@ -499,9 +484,8 @@ earns more trust.
 
 - **Q1, fidelity:** does pruning keep the take unpruned best-of-8 would have picked? Averaged over prompts, this is
   the *same-winner rate*. It grades the pruner.
-- **Q2, value:** is that pick better than a random take, according to an independent judge? It grades the selector.
-  The *gain* is the judge's score of the pick minus the average take (Fig. 4 at $N = 8$); the *oracle gain* is the
-  most any pick from the same 8 takes could get.
+- **Q2, value:** is that pick better than a random take, according to a grader the selector never saw? It grades
+  the selector. The *gain* and the *oracle gain* are Fig. 3's, at $N = 8$.
 
 A pruner can ace Q1 and still be worthless, if what it faithfully keeps is a pick no better than chance.
 
@@ -528,7 +512,7 @@ Q2 results, MusicCaps $n = 40$ (`results/frontier.json`, `selection`):
 
 Only one of four intervals excludes zero, and it does not survive correcting for four tests (at 98.75%:
 [−0.029, +0.340]). The oracle gains show the takes really differ; CLAP just does not find the good ones, as Fig. 3
-predicted. **Pruning cheaply preserves a choice that is barely better than chance.** The bottleneck is the judge.
+showed. **Pruning cheaply preserves a choice that is barely better than chance.** The bottleneck is the judge.
 
 ### A leak in my own metric
 
@@ -541,8 +525,8 @@ Now recall the CLAP code: a 30 s score averages three 10 s chunks, and the 10 s 
 decoding noise, the first chunk. So same-winner partly measures CLAP agreeing with a third of itself:
 
 :::figure leak
-**Fig. 7. The overlap, made visible.** Each dot is one take, placed by its rank within its prompt: by its 10 s score
-(x) and by a target (y). Against the chunk the 10 s score has heard, ranks sit on the diagonal (ρ = +0.99). Against
+**Fig. 6. The overlap, made visible.** Each dot is one take, placed by its rank within its prompt: by its 10 s score
+(x) and by a target (y). Against the chunk the 10 s score has heard, ranks sit on the diagonal (rank correlation ρ = +0.99, where +1 is the same order and 0 unrelated). Against
 the 20 s it has not heard, they spread out. Blue: MusicCaps; orange: slow builds.
 :::
 
@@ -552,7 +536,7 @@ often pruning keeps it. If $k$ of 8 takes survived at random, it would survive w
 (`results/future_only.json`):
 
 :::figure pruner prompt=rt_08 target=future
-**Fig. 8. Pruning, scored on audio it has not heard.** Fig. 6 again, but ◎ marks the take CLAP likes best on the
+**Fig. 7. Pruning, scored on audio it has not heard.** Fig. 5 again, but ◎ marks the take CLAP likes best on the
 last 10 s (shaded). On "lone piano ballad intro", unpruned best-of-8's pick survives keep-half (Q1 passes) while
 the take with the best ending is cut at the first checkpoint. Move the first checkpoint past 20 s and the check
 becomes untestable: pruning would have heard the target.
@@ -579,10 +563,10 @@ almost perfectly, yet the music that decides the take arrives later.] Two lesson
 Take it to production: a service receives a prompt and returns one song, running best-of-N with pruning behind the
 API. Each design decision maps to a measurement above.
 
-![Service architecture](figures/system.svg "**Fig. 9. A best-of-N music service.** The decode loop shares GPUs through continuous batching; a checkpoint scorer decides what to drop; a different model picks the keeper; an offline loop replays logged requests to evaluate new scorers and schedules exactly.")
+![Service architecture](figures/system.svg "**Fig. 8. A best-of-N music service.** The decode loop shares GPUs through continuous batching; a checkpoint scorer decides what to drop; a different model picks the keeper; an offline loop replays logged requests to evaluate new scorers and schedules exactly.")
 
 **Budget first.** On one T4, best-of-8 took 38.6 s of GPU time, pruned 26.8 s, a single take about 27 s. So the
-real choice is **"best-of-8 with pruning vs best-of-2 without"** at equal GPU-seconds, and Fig. 4 says how much the
+real choice is **"best-of-8 with pruning vs best-of-2 without"** at equal GPU-seconds, and Fig. 3 says how much the
 extra candidates buy under your judge.
 
 - **Release slots, do not shrink batches** (decoding is launch-bound). In one process, pruning saves little time.
@@ -593,10 +577,10 @@ extra candidates buy under your judge.
 - **One CUDA graph per batch size** (the GPU idles 65% of each step). Graphs need fixed shapes and pruning changes
   the batch from 16 to 8 to 4 rows, so capture one graph per size.
 - **Count the scorer** (the measured speedup did not). Run it on its own stream, overlapped with decoding.
-- **Choose the early scorer for agreement with the final judge** (judges disagree): CLAP agrees with the 2026 reward
-  model at only +0.25 within a prompt.
+- **Choose the early scorer for agreement with the final judge** (judges disagree): CLAP picks the 2026 reward
+  model's favourite take on only 18% of prompts.
 - **Replay offline** (pruning is exact). Log prompts, tokens and scores; any request can be replayed under a new
-  schedule or scorer exactly. Figs. 6 and 8 are a tiny version of this loop.
+  schedule or scorer exactly. Figs. 5 and 7 are a tiny version of this loop.
 
 For real time (20 ms per step) there is no room for eight full takes. The natural redesign is **best-of-k per
 chunk**: generate 2–4 continuations of the next 2 seconds, keep the best, repeat. The leak lesson applies directly:
@@ -621,7 +605,8 @@ judges as models with error bars that must be validated like any other.
 - Text-to-music samples, so products use best-of-N, at N times the cost.
 - A codec turns 960,000 samples into 6,000 tokens; MusicGen predicts them with a delay pattern and guidance (which
   doubles the batch). A take is a function of its prompt and its own noise.
-- Judges agree on which *prompts* went well and barely on which *take* is best, the only thing best-of-N needs.
+- Pick with one judge, grade with others. CLAP's favourite take is another judge's on 16–18% of prompts, barely
+  above the 12.5% of chance, so cheap selection recovers little of what the takes offer.
 - Small-batch decoding is launch-bound (the GPU is busy 35% of the time), which caps what pruning saves.
 - Noise keyed by take makes pruning exact, so one unpruned corpus evaluates every schedule offline.
 - Ask two questions, fidelity and value; define targets the pruner has not heard; write the analysis down first.
@@ -637,7 +622,7 @@ judges are not fully independent of each other. No human listening result yet.
 2. **KV cache.** Write the KV-cache size in bytes for $R$ rows, $T$ frames, $L$ layers and width $d$ in fp16. How
    many 30 s takes with guidance fit in 16 GB next to MusicGen-small's weights?
 3. **Schedules.** Derive the compute fraction for a first checkpoint $t_1$, a checkpoint every $t_1$ seconds and
-   keep fraction $\kappa$. Check it against Fig. 6 for 15 s and 20 s.
+   keep fraction $\kappa$. Check it against Fig. 5 for 15 s and 20 s.
 4. **Exactness.** Run `python torch/prune.py`, then change `row_keyed=True` to `False` in the pruned call and
    explain the token-match number you get.
 5. **Leak-free targets.** The check above cannot test schedules with a checkpoint after 20 s. Design a target that
@@ -682,10 +667,11 @@ Cited as:
 8. Tjandra et al. ["Meta Audiobox Aesthetics: Unified automatic quality assessment for speech, music, and sound."](https://arxiv.org/abs/2502.05139) arXiv 2025.
 9. Ma et al. ["CMI-RewardBench: Evaluating music reward models with compositional multimodal instruction."](https://arxiv.org/abs/2603.00610) ICML 2026 (CMI-RM).
 10. Kim et al. ["TuneJury: An open metric for improving music generation preference alignment."](https://arxiv.org/abs/2606.17006) arXiv 2026.
-11. Sun et al. ["Fast best-of-N decoding via speculative rejection."](https://arxiv.org/abs/2410.20290) NeurIPS 2024.
-12. Zhao et al. ["Probabilistic inference in language models via twisted sequential Monte Carlo."](https://arxiv.org/abs/2404.17546) arXiv 2024.
-13. Novack et al. ["DITTO: Diffusion inference-time T-optimization for music generation."](https://arxiv.org/abs/2401.12179) ICML 2024.
-14. Kwon et al. ["Efficient memory management for large language model serving with PagedAttention."](https://arxiv.org/abs/2309.06180) SOSP 2023 (vLLM).
-15. Rafailov et al. ["Direct preference optimization: Your language model is secretly a reward model."](https://arxiv.org/abs/2305.18290) NeurIPS 2023.
-16. Olah & Carter. ["Research debt."](https://distill.pub/2017/research-debt/) Distill 2017. Why this post has interactive figures.
-17. Karpathy. ["A recipe for training neural networks."](https://karpathy.github.io/2019/04/25/recipe/) 2019. "Become one with the data, then measure."
+11. Gao, Schulman & Hilton. ["Scaling laws for reward model overoptimization."](https://arxiv.org/abs/2210.10760) ICML 2023.
+12. Sun et al. ["Fast best-of-N decoding via speculative rejection."](https://arxiv.org/abs/2410.20290) NeurIPS 2024.
+13. Zhao et al. ["Probabilistic inference in language models via twisted sequential Monte Carlo."](https://arxiv.org/abs/2404.17546) arXiv 2024.
+14. Novack et al. ["DITTO: Diffusion inference-time T-optimization for music generation."](https://arxiv.org/abs/2401.12179) ICML 2024.
+15. Kwon et al. ["Efficient memory management for large language model serving with PagedAttention."](https://arxiv.org/abs/2309.06180) SOSP 2023 (vLLM).
+16. Rafailov et al. ["Direct preference optimization: Your language model is secretly a reward model."](https://arxiv.org/abs/2305.18290) NeurIPS 2023.
+17. Olah & Carter. ["Research debt."](https://distill.pub/2017/research-debt/) Distill 2017. Why this post has interactive figures.
+18. Karpathy. ["A recipe for training neural networks."](https://karpathy.github.io/2019/04/25/recipe/) 2019. "Become one with the data, then measure."

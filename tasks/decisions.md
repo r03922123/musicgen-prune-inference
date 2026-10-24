@@ -188,3 +188,13 @@ Exploratory reference: clap10 vs chunk-1 within-prompt Spearman +0.99, confirmin
 - The post was rewritten for readability (concrete example before formula, one idea per step) and gained Fig. 3,
   a rank chart of two judges. SPEC.md, the day-1 plan and todo, and docs/report.md were retired: the post and this
   log now hold every result and decision.
+
+## 2026-10-24: judges framed as proxy vs held-out graders; the rank chart is retired
+
+- The judges section now follows the standard framing from LLM alignment (Gao et al. 2023, reward model
+  overoptimization): CLAP is the *proxy* that selects and prunes; the other judges are held-out *graders*.
+  Fig. 3 is the existing best-of-N curve, oracle vs CLAP per grader; agreement is stated as one plain number
+  (same favourite take, 0.16 and 0.18 vs 0.125 chance).
+- The within/across-prompt Spearman explanation and its rank chart (added earlier today) are removed from the post:
+  a homemade diagnostic that readers new to evaluation found hard to follow. `torch/agreement.py` and
+  `results/judge_agreement.json` are unchanged and still back the quoted numbers. No result changed.

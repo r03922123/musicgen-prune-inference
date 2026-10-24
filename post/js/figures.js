@@ -1,6 +1,6 @@
 // Interactive figures. Each <figure class="explorable" data-fig="..."> gets mounted here; every
 // number they show is recomputed from data.json by sim.js (checked against results/ in CI).
-import { agreement, bestOfK, chunkTarget, judgeScores, prune, schedule, spearman } from "./sim.js";
+import { bestOfK, chunkTarget, prune, schedule, spearman } from "./sim.js";
 
 const NS = "http://www.w3.org/2000/svg";
 const TAKES = "ABCDEFGH";
@@ -107,7 +107,7 @@ function bands(rows, nBoot = 1000, seed = 7) {
   return means.map((v) => { v.sort((a, b) => a - b); return { lo: v[Math.floor(0.025 * nBoot)], hi: v[Math.ceil(0.975 * nBoot) - 1] }; });
 }
 
-// Fig: what N buys, under each judge, picked by the judge itself vs by CLAP, with 95% bands.
+// Fig: what N buys under each grader, picked by the grader itself (oracle) vs by CLAP, with 95% bands.
 // opts.compact: the lead figure (one judge, no controls).
 function bestofn(root, data, opts = {}) {
   const ps = data.prompts.filter((p) => p.set === "musiccaps");
@@ -131,7 +131,7 @@ function bestofn(root, data, opts = {}) {
     const { sx, sy } = axes(svg, { x0: 1, x1: 8, y0, y1, W, H, m: { l: 56, r: 150, t: 28, b: 40 }, xt: ks, yt,
       xl: "N, takes to choose from", yl: `${names[judge]} gain over a random take` });
     el("line", { x1: sx(1), x2: sx(8), y1: sy(0), y2: sy(0), class: "zero" }, svg);
-    for (const [vals, b, cls, label] of [[oracle, oB, "s-oracle", "oracle: pick by the judge"], [clap, cB, "s-clap", "pick by CLAP"]]) {
+    for (const [vals, b, cls, label] of [[oracle, oB, "s-oracle", "oracle: pick by the grader"], [clap, cB, "s-clap", "pick by CLAP"]]) {
       const band = [...ks.map((k, i) => `${sx(k)},${sy(b[i].hi)}`), ...ks.map((k, i) => `${sx(k)},${sy(b[i].lo)}`).reverse()];
       el("polyline", { points: band.join(" "), class: `band ${cls}` }, svg);
       el("polyline", { points: vals.map((v, i) => `${sx(ks[i])},${sy(v)}`).join(" "), class: `series ${cls}` }, svg);
@@ -273,63 +273,7 @@ function leak(root, data) {
   draw();
 }
 
-// Fig: do two judges rank the same takes the same way? A bump chart: ranks under CLAP (left) and under
-// another judge (right), one line per take; or, zoomed out, one line per prompt (its average take).
-function agree(root, data, opts = {}) {
-  const names = { clap: "CLAP", mulan: "MuQ-MuLan", cmi_qual: "CMI-RM quality", aes_CE: "Audiobox CE" };
-  const st = { other: "mulan", view: "one", id: opts.prompt || data.prompts[0].id };
-  const byId = Object.fromEntries(data.prompts.map((p) => [p.id, p])), id = uid();
-  const ctl = el("div", { class: "controls" }, root);
-  radios(ctl, `${id}-judge`, "Compare CLAP with", Object.entries(names).slice(1), st.other, (v) => { st.other = v; draw(); });
-  radios(ctl, `${id}-view`, "Rank", [["one", "the 8 takes of one prompt"], ["all", "the 50 prompts (average take)"]], st.view, (v) => { st.view = v; draw(); });
-  const pl = el("label", { class: "ctl-prompt", text: "Prompt " }, ctl);
-  const sel = el("select", { "aria-label": "prompt" }, pl);
-  for (const p of data.prompts) el("option", { value: p.id, text: p.title }, sel);
-  sel.value = st.id;
-  sel.addEventListener("change", () => { st.id = sel.value; draw(); });
-  const host = el("div", {}, root), note = el("p", { class: "readout" }, root);
-  const rankOf = (x) => { const o = [...x.keys()].sort((a, b) => x[b] - x[a] || a - b), r = []; o.forEach((i, j) => (r[i] = j + 1)); return r; };
-  const mean = (x) => x.reduce((a, b) => a + b, 0) / x.length;
-  const draw = () => {
-    pl.style.display = st.view === "one" ? "" : "none";
-    const one = st.view === "one", p = byId[st.id];
-    const left = one ? judgeScores(p, "clap") : data.prompts.map((q) => mean(judgeScores(q, "clap")));
-    const right = one ? judgeScores(p, st.other) : data.prompts.map((q) => mean(judgeScores(q, st.other)));
-    const n = left.length, rl = rankOf(left), rr = rankOf(right);
-    const W = 420, rowH = one ? 30 : 6.4, top = 44, H = top + n * rowH + 12, xl = 120, xr = W - 120;
-    const y = (r) => top + (r - 0.5) * rowH;
-    host.replaceChildren();
-    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "rank agreement between two judges", class: "square" }, host);
-    el("text", { x: xl, y: 16, "text-anchor": "middle", class: "label", text: "ranked by CLAP" }, svg);
-    el("text", { x: xr, y: 16, "text-anchor": "middle", class: "label", text: `ranked by ${names[st.other]}` }, svg);
-    el("text", { x: xl - 30, y: y(1) + 4, "text-anchor": "end", class: "tick", text: "best" }, svg);
-    el("text", { x: xl - 30, y: y(n) + 4, "text-anchor": "end", class: "tick", text: "worst" }, svg);
-    for (let i = 0; i < n; i++) {
-      const g = el("g", { class: one ? `take k${i}` : `rank-p ${data.prompts[i].set}` }, svg);
-      el("line", { x1: xl, x2: xr, y1: y(rl[i]), y2: y(rr[i]), class: one ? "live" : "pline" }, g);
-      if (one) {
-        for (const [x, r, a] of [[xl, rl[i], "end"], [xr, rr[i], "start"]]) {
-          el("circle", { cx: x, cy: y(r), r: 5, class: "win" }, g);
-          el("text", { x: x + (a === "end" ? -10 : 10), y: y(r) + 4, "text-anchor": a, class: "lbl", text: TAKES[i] }, g);
-        }
-      }
-    }
-    const all = agreement(data.prompts, "clap", st.other), other = names[st.other];
-    const chance = (1 / 8).toFixed(3);
-    if (one) {
-      const rho = spearman(left, right), a = rl.indexOf(1), b = rr.indexOf(1);
-      note.innerHTML = `This prompt: Spearman ρ = <b>${fmt(rho)}</b>. CLAP's favourite is take <b>${TAKES[a]}</b>, ${other}'s is take <b>${TAKES[b]}</b>` +
-        (a === b ? " (the same take)." : ".") +
-        ` Over all ${data.prompts.length} prompts: mean within-prompt ρ <b>${fmt(all.within)}</b>; same favourite in <b>${all.topMatch.toFixed(2)}</b> of prompts, against ${chance} for two judges picking at random.`;
-    } else {
-      note.innerHTML = `Ranking whole prompts by their average take: ρ = <b>${fmt(all.between)}</b> (n = ${n}; blue MusicCaps, orange slow builds). ` +
-        `The judges agree more on <i>which prompts</i> came out well than on <i>which take</i> of a prompt is best (ρ ${fmt(all.within)}). Best-of-N only ever needs the second.`;
-    }
-  };
-  draw();
-}
-
-const FIGS = { delay, bestofn, pruner, leak, agree };
+const FIGS = { delay, bestofn, pruner, leak };
 const nodes = [...document.querySelectorAll("figure.explorable")];
 if (nodes.length) {
   fetch("data.json").then((r) => r.json()).then((data) => {

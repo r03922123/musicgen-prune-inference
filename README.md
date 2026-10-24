@@ -8,8 +8,9 @@ A post with interactive figures, and the complete code and data behind every num
 - **Every analysis decision, dated:** [`tasks/decisions.md`](tasks/decisions.md)
 
 Text-to-music models sample, so products generate several takes and keep the best, at N times the cost. The post
-builds MusicGen from the waveform up, compares how machines judge music, measures where decoding time goes, makes
-early pruning exact, and evaluates it, including a leak found in its own metric.
+builds MusicGen from the waveform up, picks with one automatic judge and grades with others (the standard guard
+against reward hacking), measures where decoding time goes, makes early pruning exact, and evaluates it, including
+a leak found in its own metric.
 
 ## Where each part of the post lives
 
@@ -17,10 +18,10 @@ early pruning exact, and evaluates it, including a leak found in its own metric.
 |---|---|---|
 | From waveform to tokens | Fig. 1: codebook layouts | [`torch/prune.py`](torch/prune.py) `undelay` |
 | The generator | | [`torch/prune.py`](torch/prune.py) `generate`, `sample` |
-| Judging music | Fig. 3: do two judges pick the same take? | [`torch/scorers.py`](torch/scorers.py), [`torch/agreement.py`](torch/agreement.py) |
-| What best-of-N costs | Fig. 4: what N buys, by judge | [`torch/profile_decode.py`](torch/profile_decode.py) |
-| Early pruning | Fig. 6: prune any prompt, with audio | [`torch/evaluate.py`](torch/evaluate.py) `simulate` |
-| Evaluating a pruner | Figs. 7–8: the leak, and the leak-free check | [`torch/frontier.py`](torch/frontier.py), [`torch/future.py`](torch/future.py) |
+| Best-of-N and its judges | Fig. 3: pick with CLAP, grade with someone else | [`torch/scorers.py`](torch/scorers.py), [`torch/agreement.py`](torch/agreement.py) |
+| What decoding costs | | [`torch/profile_decode.py`](torch/profile_decode.py) |
+| Early pruning | Fig. 5: prune any prompt, with audio | [`torch/evaluate.py`](torch/evaluate.py) `simulate` |
+| Evaluating a pruner | Figs. 6–7: the leak, and the leak-free check | [`torch/frontier.py`](torch/frontier.py), [`torch/future.py`](torch/future.py) |
 | Humans | | [`torch/listen.py`](torch/listen.py), [`torch/bracket.py`](torch/bracket.py) |
 
 The figures are not drawings: [`post/js/sim.js`](post/js/sim.js) is `torch/evaluate.py` ported to JavaScript, run

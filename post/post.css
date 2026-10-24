@@ -142,10 +142,8 @@ text.end { fill: var(--muted); stroke: none; } text.s-oracle { fill: var(--k2); 
 /* best-of-N uncertainty bands */
 polyline.band { stroke: none; opacity: .18; }
 polyline.band.s-oracle { fill: var(--k2); } polyline.band.s-clap { fill: var(--k0); }
-/* judge agreement bump chart */
-.pline { stroke-width: 1.1; opacity: .55; } .rank-p.musiccaps .pline { stroke: var(--mc); } .rank-p.redteam .pline { stroke: var(--rt); }
 
-/* reading aids: the learning ladder */
+/* reading aids */
 .check { background: var(--soft); border: 1px solid var(--line); border-left: 4px solid var(--k2); border-radius: 0 8px 8px 0; padding: .6em 1em; margin: 1.3em 0; }
 .check summary { cursor: pointer; }
 .check[open] summary { margin-bottom: .4em; }
