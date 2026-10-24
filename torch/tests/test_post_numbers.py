@@ -22,7 +22,7 @@ def ci(m, d=2, signed=False):
 
 
 def expected():
-    fr, fu, ag = R("frontier.json"), R("future_only.json"), R("judge_agreement.json")
+    fr, fu = R("frontier.json"), R("future_only.json")
     pr = R("profile_decode_small_float16_pretrained_t4.json")["batches"]
     sched = {(x["first"], x["keep"]): x for x in fr["schedules"]}
     out = []
@@ -36,16 +36,9 @@ def expected():
         out += [ci(m["gain_vs_random"], d, signed=True), f"{m['oracle_gain']['mean']:.3f}"]
     b = fr["selection"]["cmi_qual"]["musiccaps"]["gain_vs_random_bonferroni"]
     out.append(f"[{s(b['lo'], 3)}, {s(b['hi'], 3)}]")
-    fut = {(x["first"], x["keep"]): x["sets"] for x in fu["schedules"]}
-    for key in [(10, 0.5), (10, 0.65), (10, 0.75)]:
-        mc = fut[key]["musiccaps"]
-        out += [f"{mc['kept']['mean']:.2f} vs {mc['chance']['mean']:.2f}", ci(mc["excess"], signed=True),
-                ci(fut[key]["redteam"]["excess"], signed=True)]
-    p = fu["predictability"]
-    out += [s(p["musiccaps"]["clap10_vs_chunks23"]["mean"]),
-            ci(p["redteam"]["clap10_vs_chunks23"], signed=True), s(p["musiccaps"]["clap10_vs_chunk1"]["mean"])]
-    out += [ci(ag["pairs"][k]["top_match"]) for k in ("clap~mulan", "clap~cmi_qual")]
-    out += [s(ag["pairs"]["clap~mulan"]["between"]), f"{ag['pairs']['clap~cmi_qual']['top_match']['mean']:.0%} of prompts"]
+    fut = {(x["first"], x["keep"]): x["sets"] for x in fu["schedules"]}[(10, 0.65)]
+    out += [f"{fut['musiccaps']['kept']['mean']:.2f} vs {fut['musiccaps']['chance']['mean']:.2f}",
+            ci(fut["redteam"]["excess"], signed=True)]
     b1, b8 = pr["1"], pr["8"]
     out += [f"| 1 (2) | {b1['wall_ms_per_step']:.1f} | {b1['gpu_busy_ms_per_step']:.1f} | {b1['gpu_share_of_wall']:.0%} | {b1['kernels_per_step']:.0f} |",
             f"| 8 (16) | {b8['wall_ms_per_step']:.1f} | {b8['gpu_busy_ms_per_step']:.1f} | {b8['gpu_share_of_wall']:.0%} | {b8['kernels_per_step']:.0f} |"]

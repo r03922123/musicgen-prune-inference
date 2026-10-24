@@ -1,16 +1,16 @@
 # musicgen-prune-inference
 
-**Best-of-N for text-to-music: sampling, judging and pruning under a compute budget.**
+**Faster best-of-N for text-to-music: pruning weak takes early.**
 A post with interactive figures, and the complete code and data behind every number in it.
 
 - **Read the post:** [r03922123.github.io/musicgen-prune-inference](https://r03922123.github.io/musicgen-prune-inference/)
   (source: [`post/post.md`](post/post.md))
 - **Every analysis decision, dated:** [`tasks/decisions.md`](tasks/decisions.md)
 
-Text-to-music models sample, so products generate several takes and keep the best, at N times the cost. The post
-builds MusicGen from the waveform up, picks with one automatic judge and grades with others (the standard guard
-against reward hacking), measures where decoding time goes, makes early pruning exact, and evaluates it, including
-a leak found in its own metric.
+Best-of-N reranking (generate N takes, keep the one CLAP scores highest, as DALL·E did with CLIP and AudioLDM with
+CLAP) costs N times one take. The post traces where the recipe comes from, builds MusicGen from the waveform up,
+measures where decoding time goes, and stops weak takes early with successive halving, exactly: same pick on 97% of
+prompts at 0.75 of the compute.
 
 ## Where each part of the post lives
 
@@ -18,13 +18,13 @@ a leak found in its own metric.
 |---|---|---|
 | From waveform to tokens | Fig. 1: codebook layouts | [`torch/prune.py`](torch/prune.py) `undelay` |
 | The generator | | [`torch/prune.py`](torch/prune.py) `generate`, `sample` |
-| Best-of-N and its judges | Fig. 3: pick with CLAP, grade with someone else | [`torch/scorers.py`](torch/scorers.py), [`torch/agreement.py`](torch/agreement.py) |
+| Best-of-N: where the recipe comes from | | [`torch/scorers.py`](torch/scorers.py) (CLAP and the other metrics) |
 | What decoding costs | | [`torch/profile_decode.py`](torch/profile_decode.py) |
-| Early pruning | Fig. 5: prune any prompt, with audio | [`torch/evaluate.py`](torch/evaluate.py) `simulate` |
-| Evaluating a pruner | Fig. 6: the leak in the metric | [`torch/frontier.py`](torch/frontier.py), [`torch/future.py`](torch/future.py) |
+| Early pruning | Fig. 4: prune any prompt, with audio | [`torch/evaluate.py`](torch/evaluate.py) `simulate` |
+| Evaluating the pruner | | [`torch/frontier.py`](torch/frontier.py), [`torch/future.py`](torch/future.py) |
 | Humans | | [`torch/listen.py`](torch/listen.py) (pairwise A/B test, not yet run) |
 
-The figures are not drawings: [`post/js/sim.js`](post/js/sim.js) is `torch/evaluate.py` ported to JavaScript, run
+The interactive figures are not drawings: [`post/js/sim.js`](post/js/sim.js) is `torch/evaluate.py` ported to JavaScript, run
 on [`post/data.json`](post/data.json) in the reader's browser, and [`post/tests/sim.test.mjs`](post/tests/sim.test.mjs)
 fails CI if it stops reproducing `results/`.
 
@@ -37,8 +37,7 @@ uv sync
 uv run python torch/prune.py                 # exactness self-check, plus mutations that must fail
 uv run pytest torch/tests -q                 # evaluation tests, and every number in the post vs results/
 uv run python torch/frontier.py              # Q1 / Q2 tables
-uv run python torch/future.py                # the leak-free check
-uv run python torch/agreement.py             # judge agreement
+uv run python torch/future.py                # does the 10 s score predict the unheard last 10 s?
 
 cd post && npm ci && node build.mjs          # the post -> post/dist/index.html
 ```

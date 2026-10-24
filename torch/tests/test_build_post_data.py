@@ -14,15 +14,14 @@ def test_title_takes_first_clause_and_cuts_at_word():
     assert len(t) <= 65 and t.endswith("…") and not t.startswith(" ")
 
 
-def test_prompts_payload_keeps_prefixes_chunks_and_q2_judges():
+def test_prompts_payload_keeps_prefixes_and_chunks():
     s = {"clap": {str(t): [t] * 8 for t in range(5, 31, 5)},
          **{j: [1.0] * 8 for j in ("aes_CE", "aes_PQ", "mulan", "cmi_qual", "cmi_ali")}}
     p = prompts([{"id": "rt_00", "prompt": "slow build, then loud", "n": 8, "scores": s}],
                 {"rt_00": [[0.1, 0.2, 0.3]] * 8})[0]
     assert p["set"] == "redteam" and p["title"] == "slow build"
     assert list(p["clap"]) == [str(t) for t in PREFIXES] and p["clap"]["20"] == [20] * 8
-    assert p["chunks"][0] == [0.1, 0.2, 0.3]
-    assert set(p["judges"]) == {"aes_CE", "mulan", "cmi_qual", "cmi_ali"}
+    assert p["chunks"][0] == [0.1, 0.2, 0.3] and "judges" not in p
 
 
 def test_committed_data_json_is_reproducible():

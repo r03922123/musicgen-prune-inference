@@ -34,7 +34,7 @@ for (const [name, width] of [["desktop", 1366], ["mobile", 390]]) {
   if (!r.katex || r.katexErrors || r.rawDollars) errors.push(`${name}: math katex=${r.katex} errors=${r.katexErrors} unrendered=${r.rawDollars}`);
   if (r.brokenImages.length) errors.push(`${name}: broken images ${r.brokenImages}`);
   if (r.hscroll) errors.push(`${name}: horizontal scroll`);
-  if (r.live.length !== 5 || r.live.some(([, ok]) => !ok)) errors.push(`${name}: interactive figures ${JSON.stringify(r.live)}`);
+  if (r.live.length !== 2 || r.live.some(([, ok]) => !ok)) errors.push(`${name}: interactive figures ${JSON.stringify(r.live)}`);
   if (r.sidenotes < 3) errors.push(`${name}: sidenotes ${r.sidenotes}`);
 
   // The pruning figure responds to its controls and recomputes over all prompts.
@@ -57,7 +57,7 @@ for (const [name, width] of [["desktop", 1366], ["mobile", 390]]) {
     await fig.scrollIntoViewIfNeeded();
     await fig.screenshot({ path: `${shots}/pruner-${name}.png` });
     await page.screenshot({ path: `${shots}/top-${name}.png` });
-    for (const [i, f] of [[0, "delay"], [1, "bestofn"], [0, "leak"], [0, "pruner"]])
+    for (const [i, f] of [[0, "delay"], [0, "pruner"]])
       await page.locator(`figure[data-fig="${f}"]`).nth(i).screenshot({ path: `${shots}/${f}${i}-${name}.png` });
   }
   console.log(`${name}: ${r.h2} sections, ${r.katex} formulas, ${r.live.length} interactive figures, ${r.sidenotes} sidenotes`);

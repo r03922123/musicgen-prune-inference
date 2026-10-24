@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { bestOfK, meanRho, schedule } from "../js/sim.js";
+import { schedule } from "../js/sim.js";
 
 // Python writes NaN (an undefined statistic) into results JSON; read it as null.
 const read = (p) => JSON.parse(String(readFileSync(new URL(p, import.meta.url))).replace(/\bNaN\b/g, "null"));
@@ -31,21 +31,4 @@ test("leak-free kept rates match results/future_only.json", () => {
       close(js.kept, py.kept.mean, `${s.first}/${s.keep} ${name} kept`);
       close(js.chance, py.chance.mean, `${s.first}/${s.keep} ${name} chance`);
     }
-});
-
-test("best-of-8 by CLAP and by the judge match the Q2 selection gains", () => {
-  for (const [judge, sel] of Object.entries(frontier.selection)) {
-    const ps = sets.musiccaps;
-    const avg = (by) => ps.reduce((a, p) => a + bestOfK(p, judge, 8, by), 0) / ps.length;
-    close(avg("clap"), sel.musiccaps.gain_vs_random.mean, `${judge} CLAP pick gain`);
-    close(avg("judge"), sel.musiccaps.oracle_gain.mean, `${judge} oracle gain`);
-  }
-});
-
-test("10 s score vs heard and unheard chunks matches the predictability check", () => {
-  for (const [name, ps] of Object.entries(sets)) {
-    const p = future.predictability[name];
-    close(meanRho(ps, "heard"), p.clap10_vs_chunk1.mean, `${name} heard`);
-    close(meanRho(ps, "unheard"), p.clap10_vs_chunks23.mean, `${name} unheard`);
-  }
 });

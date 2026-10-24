@@ -1,6 +1,6 @@
 // Interactive figures. Each <figure class="explorable" data-fig="..."> gets mounted here; every
 // number they show is recomputed from data.json by sim.js (checked against results/ in CI).
-import { bestOfK, chunkTarget, prune, schedule, spearman } from "./sim.js";
+import { prune, schedule } from "./sim.js";
 
 const NS = "http://www.w3.org/2000/svg";
 const TAKES = "ABCDEFGH";
@@ -11,7 +11,6 @@ const el = (tag, attrs = {}, parent) => {
   if (parent) parent.append(e);
   return e;
 };
-const fmt = (x, d = 2) => (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(d);
 let uidN = 0;
 const uid = () => `f${++uidN}`;                   // radio-group names, unique per figure instance
 
@@ -92,61 +91,6 @@ function delay(root) {
     timer = setInterval(() => { if (+range.value >= S) return clearInterval(timer); range.value = +range.value + 1; draw(); }, 450);
   });
   range.addEventListener("input", () => { clearInterval(timer); draw(); });
-  draw();
-}
-
-// Bootstrap over prompts, seeded, for bands: rows = prompts, cols = values -> {lo, hi} per col.
-function bands(rows, nBoot = 1000, seed = 7) {
-  let s = seed; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
-  const n = rows.length, m = rows[0].length, means = Array.from({ length: m }, () => []);
-  for (let b = 0; b < nBoot; b++) {
-    const acc = Array(m).fill(0);
-    for (let i = 0; i < n; i++) { const r = rows[Math.floor(rnd() * n)]; for (let j = 0; j < m; j++) acc[j] += r[j]; }
-    acc.forEach((v, j) => means[j].push(v / n));
-  }
-  return means.map((v) => { v.sort((a, b) => a - b); return { lo: v[Math.floor(0.025 * nBoot)], hi: v[Math.ceil(0.975 * nBoot) - 1] }; });
-}
-
-// Fig: what N buys under each grader, picked by the grader itself (oracle) vs by CLAP, with 95% bands.
-// opts.compact: the lead figure (one judge, no controls).
-function bestofn(root, data, opts = {}) {
-  const ps = data.prompts.filter((p) => p.set === "musiccaps");
-  const names = { cmi_qual: "CMI-RM quality", cmi_ali: "CMI-RM alignment", aes_CE: "Audiobox CE", mulan: "MuQ-MuLan" };
-  const compact = !!opts.compact;
-  let judge = "cmi_qual";
-  if (!compact) radios(el("div", { class: "controls" }, root), `${uid()}-judge`, "Grade with", Object.entries(names), judge, (v) => { judge = v; draw(); });
-  const host = el("div", {}, root), note = el("p", { class: "readout" }, root);
-  const ks = [1, 2, 3, 4, 5, 6, 7, 8];
-  const draw = () => {
-    const per = (by) => ps.map((p) => ks.map((k) => bestOfK(p, judge, k, by)));
-    const mean = (rows) => ks.map((_, j) => rows.reduce((a, r) => a + r[j], 0) / rows.length);
-    const oR = per("judge"), cR = per("clap"), oracle = mean(oR), clap = mean(cR), oB = bands(oR), cB = bands(cR);
-    const top = Math.max(...oB.map((b) => b.hi)), lo = Math.min(0, ...cB.map((b) => b.lo));
-    const step = top > 0.6 ? 0.25 : top > 0.25 ? 0.1 : 0.05;
-    const y1 = Math.ceil(top / step) * step, y0 = Math.floor(lo / step) * step;
-    const yt = []; for (let y = y0; y <= y1 + 1e-9; y += step) yt.push(+y.toFixed(2));
-    host.replaceChildren();
-    const W = Math.min(640, Math.max(460, root.clientWidth)), H = compact ? 240 : 300;   // narrower viewBox on phones keeps text legible
-    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "best-of-N gain chart" }, host);
-    const { sx, sy } = axes(svg, { x0: 1, x1: 8, y0, y1, W, H, m: { l: 56, r: 150, t: 28, b: 40 }, xt: ks, yt,
-      xl: "N, takes to choose from", yl: `${names[judge]} gain over a random take` });
-    el("line", { x1: sx(1), x2: sx(8), y1: sy(0), y2: sy(0), class: "zero" }, svg);
-    for (const [vals, b, cls, label] of [[oracle, oB, "s-oracle", "oracle: pick by the grader"], [clap, cB, "s-clap", "pick by CLAP"]]) {
-      const band = [...ks.map((k, i) => `${sx(k)},${sy(b[i].hi)}`), ...ks.map((k, i) => `${sx(k)},${sy(b[i].lo)}`).reverse()];
-      el("polyline", { points: band.join(" "), class: `band ${cls}` }, svg);
-      el("polyline", { points: vals.map((v, i) => `${sx(ks[i])},${sy(v)}`).join(" "), class: `series ${cls}` }, svg);
-      vals.forEach((v, i) => el("circle", { cx: sx(ks[i]), cy: sy(v), r: 3.5, class: `dot ${cls}` }, svg));
-      el("text", { x: sx(8) + 8, y: sy(vals[7]) + 4, class: `end ${cls}`, text: label }, svg);
-    }
-    const ry = Math.abs(sy(clap[7]) - sy(0)) < 16 ? sy(clap[7]) + 18 : sy(0) + 14;     // clear of the CLAP label
-    el("text", { x: sx(8) + 8, y: ry, class: "end", text: "random pick (= 0)" }, svg);
-    // Bands are a visual guide (1,000 in-browser resamples); the intervals quoted in the text come from
-    // results/ (10,000 resamples), so the readout does not print the band's own interval.
-    note.innerHTML = compact
-      ? `Eight takes differ: picking with the judge itself would gain <b>${oracle[7].toFixed(3)}</b>. Picking with CLAP gains <b>${fmt(clap[7], 3)}</b>. MusicCaps, n = ${ps.length}; shaded: 95% bootstrap bands over prompts.`
-      : `With 8 takes, a perfect selector gains <b>${oracle[7].toFixed(3)}</b>; CLAP's pick gains <b>${fmt(clap[7], 3)}</b> (interval: the Q2 table). ` +
-        `The oracle's first doubling (1→2) buys ${(oracle[1] - oracle[0]).toFixed(3)}, the last (4→8) ${(oracle[7] - oracle[3]).toFixed(3)}. MusicCaps prompts, n = ${ps.length}.`;
-  };
   draw();
 }
 
@@ -240,36 +184,7 @@ function pruner(root, data, opts = {}) {
   draw();
 }
 
-// Fig: the 10 s score against the chunk it has heard vs the chunks it has not.
-function leak(root, data) {
-  let which = "heard";
-  const ctl = el("div", { class: "controls" }, root);
-  radios(ctl, "lk", "Compare the 10 s score with", [["heard", "CLAP on 0–10 s (heard)"], ["unheard", "CLAP on 10–30 s (unheard)"]], which, (v) => { which = v; draw(); });
-  const host = el("div", {}, root), note = el("p", { class: "readout" }, root);
-  const ranks = (x) => x.map((v) => 1 + x.filter((w) => w < v).length + (x.filter((w) => w === v).length - 1) / 2);
-  const draw = () => {
-    host.replaceChildren();
-    const W = 420, H = 380, svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "rank scatter", class: "square" }, host);
-    const ax = axes(svg, { x0: 0.5, x1: 8.5, y0: 0.5, y1: 8.5, W, H, m: { l: 44, r: 16, t: 28, b: 40 }, xt: [1, 2, 3, 4, 5, 6, 7, 8], yt: [1, 2, 3, 4, 5, 6, 7, 8],
-      xl: "rank of a take by its 10 s score (within its prompt)", yl: "rank by the target" });
-    const rhos = { musiccaps: [], redteam: [] };
-    let seed = 1; const jit = () => ((seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5) * 0.55;
-    for (const p of data.prompts) {
-      const x = ranks(p.clap["10"]), y = ranks(chunkTarget(p, which));
-      const rho = spearman(p.clap["10"], chunkTarget(p, which));
-      if (!Number.isNaN(rho)) rhos[p.set].push(rho);
-      x.forEach((xv, i) => el("circle", { cx: ax.sx(xv + jit()), cy: ax.sy(y[i] + jit()), r: 2.6, class: `pt ${p.set}` }, svg));
-    }
-    const m = (a) => a.reduce((s, v) => s + v, 0) / a.length;
-    note.innerHTML = `Within-prompt Spearman ρ, averaged: MusicCaps <b>${fmt(m(rhos.musiccaps))}</b> (n = ${rhos.musiccaps.length}), ` +
-      `slow builds <b>${fmt(m(rhos.redteam))}</b> (n = ${rhos.redteam.length}). ` +
-      (which === "heard" ? "The 10 s score is, up to decoding noise, the same measurement as the first chunk."
-        : "This is what an early score can actually predict about audio it has not heard.");
-  };
-  draw();
-}
-
-const FIGS = { delay, bestofn, pruner, leak };
+const FIGS = { delay, pruner };
 const nodes = [...document.querySelectorAll("figure.explorable")];
 if (nodes.length) {
   fetch("data.json").then((r) => r.json()).then((data) => {

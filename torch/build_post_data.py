@@ -4,9 +4,8 @@ Build the post's interactive-figure data and audio (post/). Mac, no GPU, no mode
   python torch/build_post_data.py                 # post/data.json + post/audio/<id>_<row>.mp3
   python torch/build_post_data.py --no-audio      # data.json only
 
-data.json holds, per prompt, the caption, CLAP scores of every 5 s prefix, CLAP of each 10 s chunk
-(results/clap_chunks.json) and the four Q2 judges' scores. The figures recompute the committed
-results from it in the browser; post/tests/sim.test.mjs checks they match results/. Audio: every
+data.json holds, per prompt, the caption, CLAP scores of every 5 s prefix and CLAP of each 10 s chunk
+(results/clap_chunks.json). The pruning figure recomputes the committed results from it in the browser; post/tests/sim.test.mjs checks they match results/. Audio: every
 take loudness-normalised to -16 LUFS with one linear gain (no compression, so slow builds keep
 their dynamics), peak-limited, boost capped at +15 dB, 64 kbps mono MP3.
 """
@@ -16,7 +15,6 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 PREFIXES = (5, 10, 15, 20, 25, 30)
-JUDGES = ("aes_CE", "mulan", "cmi_qual", "cmi_ali")
 TARGET_LUFS, PEAK_DBFS, MAX_BOOST_DB = -16.0, -1.0, 15.0
 
 
@@ -33,8 +31,7 @@ def prompts(recs, chunks):
         out.append({"id": r["id"], "set": "redteam" if r["id"].startswith("rt_") else "musiccaps",
                     "title": title(r["prompt"]), "caption": r["prompt"], "n": r["n"],
                     "clap": {str(t): s["clap"][str(t)] for t in PREFIXES},
-                    "chunks": chunks[r["id"]],
-                    "judges": {j: s[j] for j in JUDGES}})
+                    "chunks": chunks[r["id"]]})
     return out
 
 

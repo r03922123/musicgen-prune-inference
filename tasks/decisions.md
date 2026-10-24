@@ -209,3 +209,18 @@ Exploratory reference: clap10 vs chunk-1 within-prompt Spearman +0.99, confirmin
   `torch/evaluate.py` and their tests) and the second, leak-free copy of the pruning figure; the leak-free table
   stays, still checked against `results/future_only.json`. No result changed.
 - The post went from 28 to 18 minutes (220 words per minute, references included).
+
+## 2026-10-24: the post is about making CLAP reranking cheaper, not about judging CLAP
+
+- The author's goal is to speed up an existing practice: best-of-N with CLAP as the scorer (MusicGen's text metric,
+  AudioLDM's reranker). Questioning CLAP itself (judge agreement, proxy vs gold, reward hacking) had become a
+  section of its own and buried the goal. It is now one premise, backed by verified sources: reranking with CLIP
+  in DALL·E (best of 512, Ramesh et al. 2021), verifiers and best-of-64 in LLMs (Cobbe et al. 2021, WebGPT),
+  CLAP reranking in AudioLDM (metrics on the best of 3, recomputed without reranking by Haji-Ali et al. 2024),
+  CLAP as an evaluation metric in MusicGen, and learned music judges now (Audiobox Aesthetics, CMI-RM, TuneJury).
+- Kept: Q1 same-winner (the goal), Q2 gains of CLAP's pick on the other metrics (a MusicGen-style check; CLAP's own
+  gain is omitted because the best of 8 always beats their average), and the leak-free check as one paragraph
+  (for reproducing CLAP's 30 s pick the 10 s overlap is the mechanism; it matters only for predicting late music).
+- Removed: Fig. 3 (best-of-N curve per grader), Fig. 6 (leak scatter), `torch/agreement.py`,
+  `results/judge_agreement.json`, the JS ports and tests they needed, and the judges' scores in `post/data.json`.
+  No result changed. Read time 18 minutes.
